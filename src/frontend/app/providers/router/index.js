@@ -3,6 +3,7 @@ import { PDAPage } from '../../../pages/pda';
 import { HomePage } from '../../../pages/home';
 import ExpLoggerPage from '../../../pages/exp-logger';
 import DebugPage from '../../../pages/debug';
+import AlertsPage from '../../../pages/alerts';
 
 const routes = [
     {
@@ -24,6 +25,11 @@ const routes = [
         path: '/debug',
         name: 'Debug',
         component: DebugPage
+    },
+    {
+        path: '/alerts',
+        name: 'Alerts',
+        component: AlertsPage
     }
 ];
 

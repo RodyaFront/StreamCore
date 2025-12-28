@@ -14,7 +14,7 @@ export default {
     extend: {
       fontFamily: {
         mono: ['Consolas', 'Monaco', 'Courier New', 'Courier', 'monospace'],
-      }
+      },
     },
   },
   plugins: [],

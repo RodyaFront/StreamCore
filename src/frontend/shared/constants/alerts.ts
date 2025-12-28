@@ -1,0 +1,6 @@
+export const ALERTS_CONSTANTS = {
+    DEFAULT_DURATION: 120000,
+    MAX_ALERTS: 10,
+    ANIMATION_DURATION: 300
+} as const;
+

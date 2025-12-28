@@ -4,6 +4,9 @@ import {
 import { ApiClient } from '@twurple/api';
 import { EventSubWsListener } from '@twurple/eventsub-ws';
 import { upsertReward, insertRedemption } from '../../database/queries/rewards.js';
+import { getUserInfoForAlert } from '../../database/queries/alerts.js';
+import { getUserLevel } from '../../database/queries/levels.js';
+import { getUserStats } from '../../database/queries/users.js';
 import { logger } from '../../core/logger.js';
 import { eventBus } from '../../core/index.js';
 
@@ -90,6 +93,27 @@ export async function initTwitchEventSub() {
                     userInput,
                     redemptionDate
                 );
+
+                if (rewardTitle.toLowerCase().includes('обо мне') || rewardTitle.toLowerCase().includes('about me')) {
+                    try {
+                        const userStats = getUserStats.get(username);
+                        const userLevel = getUserLevel.get(username);
+
+                        if (userStats) {
+                            const alertData = {
+                                username: username,
+                                level: userLevel ? userLevel.level : 1,
+                                messageCount: userStats.message_count || 0,
+                                firstSeen: userStats.first_seen || new Date().toISOString()
+                            };
+
+                            eventBus.emit('alert:user_info', alertData);
+                            console.log(`[ALERTS] 📢 Алерт "Обо мне" для ${username}`);
+                        }
+                    } catch (error) {
+                        console.error('[ALERTS] ❌ Ошибка при создании алерта "Обо мне":', error);
+                    }
+                }
             } catch (error) {
                 console.error('[REWARDS] ❌ Ошибка при сохранении награды в БД:', error);
             }

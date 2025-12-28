@@ -2,12 +2,14 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_CONFIG } from '@shared/config/socket.js';
 import { SOCKET_RETRY_CONFIG } from '@shared/constants/expLogger';
-import { isValidExpAddedEvent, isValidLevelUpEvent } from '@shared/utils/validation';
+import { isValidExpAddedEvent, isValidLevelUpEvent, isValidUserInfoAlertEvent } from '@shared/utils/validation';
 import type { ExpAddedEvent, LevelUpEvent } from '@shared/types';
+import type { UserInfoAlertEvent } from '@shared/types/alerts';
 
 interface SocketEventHandlers {
     onExpAdded?: (data: ExpAddedEvent) => void;
     onLevelUp?: (data: LevelUpEvent) => void;
+    onUserInfoAlert?: (data: UserInfoAlertEvent) => void;
     onConnect?: () => void;
     onDisconnect?: () => void;
     onError?: (error: Error) => void;
@@ -104,6 +106,19 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
                 onLevelUpHandler(data);
             });
         }
+
+        if (handlers.onUserInfoAlert) {
+            const onUserInfoAlertHandler = handlers.onUserInfoAlert;
+            socket.value.on('alert:user_info', (data: unknown) => {
+                if (!isValidUserInfoAlertEvent(data)) {
+                    const errorMsg = 'Получены некорректные данные события alert:user_info';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('alert:user_info', data, errorMsg);
+                    return;
+                }
+                onUserInfoAlertHandler(data);
+            });
+        }
     };
 
     const disconnect = (): void => {
@@ -117,6 +132,7 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
         if (socket.value) {
             socket.value.off('level:exp:added');
             socket.value.off('level:up');
+            socket.value.off('alert:user_info');
             socket.value.disconnect();
             socket.value = null;
             isConnected.value = false;

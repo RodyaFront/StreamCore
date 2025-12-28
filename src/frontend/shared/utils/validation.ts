@@ -1,4 +1,5 @@
 import type { ExpAddedEvent, LevelUpEvent, ExpSource } from '@shared/types';
+import type { UserInfoAlertEvent } from '@shared/types/alerts';
 
 const VALID_EXP_SOURCES: ExpSource[] = ['message', 'word_of_day', 'achievement', 'quest', 'streak', 'unknown'];
 
@@ -60,6 +61,32 @@ export function isValidLevelUpEvent(data: unknown): data is LevelUpEvent {
     }
 
     if (typeof event.totalExp !== 'number' || event.totalExp < 0 || !Number.isFinite(event.totalExp)) {
+        return false;
+    }
+
+    return true;
+}
+
+export function isValidUserInfoAlertEvent(data: unknown): data is UserInfoAlertEvent {
+    if (!data || typeof data !== 'object') {
+        return false;
+    }
+
+    const event = data as Record<string, unknown>;
+
+    if (typeof event.username !== 'string' || event.username.trim() === '') {
+        return false;
+    }
+
+    if (typeof event.level !== 'number' || event.level < 1 || !Number.isInteger(event.level)) {
+        return false;
+    }
+
+    if (typeof event.messageCount !== 'number' || event.messageCount < 0 || !Number.isInteger(event.messageCount)) {
+        return false;
+    }
+
+    if (typeof event.firstSeen !== 'string' || event.firstSeen.trim() === '') {
         return false;
     }
 

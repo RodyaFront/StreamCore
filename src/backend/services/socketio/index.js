@@ -29,6 +29,13 @@ export const SocketIOService = {
                 this.io.emit('level:up', data);
             }
         });
+
+        // Транслируем события алертов клиентам
+        eventBus.on('alert:user_info', (data) => {
+            if (this.io) {
+                this.io.emit('alert:user_info', data);
+            }
+        });
     },
 
     getIO() {
