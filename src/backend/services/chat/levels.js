@@ -9,8 +9,12 @@ import {
     userLevelExists
 } from '../../database/queries/levels.js';
 import { getUserStats, createUserStats } from '../../database/queries/users.js';
+import { db } from '../../database/schema.js';
 import { eventBus } from '../../core/index.js';
 import { logger } from '../../core/logger.js';
+
+// Очереди для последовательной обработки наград одного пользователя
+const userQueues = new Map();
 
 /**
  * Базовая стоимость опыта за уровень
@@ -136,39 +140,103 @@ export function initializeLevel(username) {
  * @param {number} pointsSpent - количество потраченных баллов (опционально, для наград)
  * @returns {object|null} - обновленные данные уровня или null при ошибке
  */
-export function addExp(username, amount, source = 'unknown', pointsSpent = null) {
+export async function addExp(username, amount, source = 'unknown', pointsSpent = null) {
     try {
         const normalizedUsername = username.toLowerCase();
 
-        // Инициализируем уровень, если его нет
-        let levelData = getUserLevelData(normalizedUsername);
-        if (!levelData) {
-            levelData = initializeLevel(normalizedUsername);
-            if (!levelData) {
-                return null;
-            }
+        // Создаем очередь для этого пользователя, если её нет
+        if (!userQueues.has(normalizedUsername)) {
+            userQueues.set(normalizedUsername, Promise.resolve());
         }
 
-        const oldLevel = levelData.level;
-        const oldTotalExp = levelData.total_exp;
-        const newTotalExp = oldTotalExp + amount;
+        // Добавляем операцию в очередь
+        const previousOperation = userQueues.get(normalizedUsername);
+        const currentOperation = previousOperation.then(() => {
 
-        // Рассчитываем новый уровень
-        const newLevel = calculateLevel(newTotalExp);
-        const newExp = calculateCurrentExpInLevel(newTotalExp, newLevel);
-        const newExpToNextLevel = calculateExpToNextLevel(newLevel, newExp);
+            // Используем транзакцию для атомарности чтения и обновления
+            // Это гарантирует, что при быстрых последовательных вызовах
+            // каждый вызов будет видеть актуальные данные
+            const transaction = db.transaction(() => {
+                // Инициализируем уровень, если его нет
+                let levelData = getUserLevelData(normalizedUsername);
+                if (!levelData) {
+                    // Внутри транзакции инициализируем уровень
+                    const exists = userLevelExists.get(normalizedUsername);
+                    if (!exists || exists.count === 0) {
+                        const userStats = getUserStats.get(normalizedUsername);
+                        if (!userStats) {
+                            createUserStats.run(normalizedUsername);
+                        }
+                        initializeUserLevel.run(normalizedUsername);
+                    }
+                    // Перечитываем после инициализации
+                    levelData = getUserLevelData(normalizedUsername);
+                    if (!levelData) {
+                        return null;
+                    }
+                }
 
-        // Обновляем данные в базе
+                const oldLevel = levelData.level;
+                const oldTotalExp = levelData.total_exp;
+                const newTotalExp = oldTotalExp + amount;
+
+                // Рассчитываем новый уровень
+                const newLevel = calculateLevel(newTotalExp);
+                const newExp = calculateCurrentExpInLevel(newTotalExp, newLevel);
+                const newExpToNextLevel = calculateExpToNextLevel(newLevel, newExp);
+
+                // Обновляем данные в базе
+                if (newLevel > oldLevel) {
+                    // Уровень повысился - обновляем все поля
+                    // ВАЖНО: порядок параметров должен соответствовать SQL: level, exp, exp_to_next_level, total_exp, username
+                    updateUserLevel.run(
+                        newLevel,
+                        newExp,
+                        newExpToNextLevel,
+                        newTotalExp,
+                        normalizedUsername
+                    );
+                } else {
+                    // Уровень не изменился - обновляем только опыт
+                    // ВАЖНО: порядок параметров должен соответствовать SQL: exp, exp_to_next_level, total_exp, username
+                    updateUserExp.run(
+                        newExp,
+                        newExpToNextLevel,
+                        newTotalExp,
+                        normalizedUsername
+                    );
+                }
+
+                return {
+                    oldLevel,
+                    newLevel,
+                    oldTotalExp,
+                    newTotalExp,
+                    newExp,
+                    newExpToNextLevel
+                };
+            });
+
+            return transaction();
+        }).catch((error) => {
+            logger.error(`[LEVELS] Ошибка в очереди для ${normalizedUsername}:`, error);
+            throw error;
+        });
+
+        // Обновляем очередь для следующего вызова
+        userQueues.set(normalizedUsername, currentOperation);
+
+        // Ждем завершения текущей операции
+        const result = await currentOperation;
+        if (!result) {
+            logger.error(`[LEVELS] Ошибка при обработке опыта для ${username}`);
+            return null;
+        }
+
+        const { oldLevel, newLevel, oldTotalExp, newTotalExp, newExp, newExpToNextLevel } = result;
+
+        // Отправляем события после успешного обновления БД
         if (newLevel > oldLevel) {
-            // Уровень повысился - обновляем все поля
-            updateUserLevel.run(
-                normalizedUsername,
-                newLevel,
-                newExp,
-                newExpToNextLevel,
-                newTotalExp
-            );
-
             // Отправляем событие о повышении уровня
             eventBus.emit('level:up', {
                 username: normalizedUsername,
@@ -178,14 +246,6 @@ export function addExp(username, amount, source = 'unknown', pointsSpent = null)
             });
 
             logger.info(`[LEVELS] ${normalizedUsername} повысил уровень: ${oldLevel} → ${newLevel}`);
-        } else {
-            // Уровень не изменился - обновляем только опыт
-            updateUserExp.run(
-                normalizedUsername,
-                newExp,
-                newExpToNextLevel,
-                newTotalExp
-            );
         }
 
         // Отправляем событие о добавлении опыта
@@ -305,7 +365,9 @@ export function initializeLevelsEventHandlers() {
 
         const expAmount = calculateMessageExp(messageLength);
         if (expAmount > 0) {
-            addExp(username, expAmount, 'message');
+            addExp(username, expAmount, 'message').catch((error) => {
+                logger.error(`[LEVELS] Ошибка при добавлении опыта за сообщение для ${username}:`, error);
+            });
         }
     });
 

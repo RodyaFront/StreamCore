@@ -15,15 +15,20 @@ export function setupDebugRoutes(req, res, pathname, searchParams) {
 
                 switch (eventType) {
                     case 'exp:added':
-                        addExp(username, amount, source);
+                        addExp(username, amount, source).catch((error) => {
+                            console.error('[DEBUG] Ошибка при добавлении опыта:', error);
+                        });
                         break;
 
                     case 'level:up':
                         // Добавляем достаточно опыта для повышения уровня
-                        const levelData = addExp(username, 1000, source);
-                        if (levelData && levelData.level > 1) {
-                            // Событие уже отправлено через addExp
-                        }
+                        addExp(username, 1000, source).then((levelData) => {
+                            if (levelData && levelData.level > 1) {
+                                // Событие уже отправлено через addExp
+                            }
+                        }).catch((error) => {
+                            console.error('[DEBUG] Ошибка при добавлении опыта для повышения уровня:', error);
+                        });
                         break;
 
                     case 'exp:added:custom':

@@ -97,10 +97,13 @@ export async function initTwitchEventSub() {
 
                 // Конвертируем баллы в опыт: 1 балл = 1 опыт
                 if (rewardCost > 0) {
-                    const expResult = addExp(username, rewardCost, 'reward', rewardCost);
-                    if (expResult) {
-                        logger.info(`[REWARDS] ${username} получил ${rewardCost} опыта за награду "${rewardTitle}" (${rewardCost} баллов)`);
-                    }
+                    addExp(username, rewardCost, 'reward', rewardCost).then((expResult) => {
+                        if (expResult) {
+                            logger.info(`[REWARDS] ${username} получил ${rewardCost} опыта за награду "${rewardTitle}" (${rewardCost} баллов)`);
+                        }
+                    }).catch((error) => {
+                        logger.error(`[REWARDS] Ошибка при добавлении опыта для ${username}:`, error);
+                    });
                 }
 
                 if (rewardTitle.toLowerCase().includes('обо мне') || rewardTitle.toLowerCase().includes('about me')) {
