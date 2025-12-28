@@ -21,6 +21,12 @@ export const updateUserStats = db.prepare(`
         updated_at = CURRENT_TIMESTAMP
 `);
 
+export const createUserStats = db.prepare(`
+    INSERT INTO user_stats (username, message_count, last_seen, total_characters, updated_at)
+    VALUES (?, 0, CURRENT_TIMESTAMP, 0, CURRENT_TIMESTAMP)
+    ON CONFLICT(username) DO NOTHING
+`);
+
 export const getTopUsers = db.prepare(`
     SELECT username, message_count, first_seen, last_seen, total_characters
     FROM user_stats

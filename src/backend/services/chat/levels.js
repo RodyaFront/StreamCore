@@ -8,6 +8,7 @@ import {
     getTopExp,
     userLevelExists
 } from '../../database/queries/levels.js';
+import { getUserStats, createUserStats } from '../../database/queries/users.js';
 import { eventBus } from '../../core/index.js';
 import { logger } from '../../core/logger.js';
 
@@ -102,6 +103,13 @@ export function initializeLevel(username) {
         const exists = userLevelExists.get(normalizedUsername);
         if (exists && exists.count > 0) {
             return getUserLevelData(normalizedUsername);
+        }
+
+        // Проверяем, существует ли пользователь в user_stats
+        const userStats = getUserStats.get(normalizedUsername);
+        if (!userStats) {
+            // Создаем пользователя в user_stats, если его нет
+            createUserStats.run(normalizedUsername);
         }
 
         // Создаем новый уровень

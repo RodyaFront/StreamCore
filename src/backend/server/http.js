@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { setupChatRoutes } from '../api/routes/chat.js';
+import { setupDebugRoutes } from '../api/routes/debug.js';
 import { URL } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,6 +22,31 @@ export function createHttpServer() {
 
             try {
                 const handled = setupChatRoutes(req, res, pathname, searchParams);
+                if (!handled) {
+                    res.writeHead(404);
+                    res.end(JSON.stringify({ error: 'Endpoint not found' }));
+                }
+            } catch (error) {
+                res.writeHead(500);
+                res.end(JSON.stringify({ error: error.message }));
+            }
+            return;
+        }
+
+        if (pathname.startsWith('/api/debug')) {
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+            if (req.method === 'OPTIONS') {
+                res.writeHead(200);
+                res.end();
+                return;
+            }
+
+            try {
+                const handled = setupDebugRoutes(req, res, pathname, searchParams);
                 if (!handled) {
                     res.writeHead(404);
                     res.end(JSON.stringify({ error: 'Endpoint not found' }));
