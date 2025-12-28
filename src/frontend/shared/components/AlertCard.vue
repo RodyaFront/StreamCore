@@ -16,7 +16,7 @@
         ></div>
         <template v-if="alert.data.type === 'user_info'">
             <div class="flex rounded-2xl relative overflow-hidden bg-green-950/80">
-                <CircularProgress :progress="progress" class="top-3 right-3"/>
+                <CircularProgress :progress="progress" :remaining-seconds="props.remainingSeconds" class="top-3 right-3"/>
                 <img
                     :src="panelBgGrass"
                     alt=""
@@ -63,6 +63,7 @@ import CircularProgress from './CircularProgress.vue';
 interface Props {
     alert: Alert;
     progress?: number;
+    remainingSeconds?: number;
 }
 
 type FireflyPositionTop = {
@@ -113,7 +114,8 @@ const POSITION_THRESHOLDS = {
 } as const;
 
 const props = withDefaults(defineProps<Props>(), {
-    progress: 0
+    progress: 0,
+    remainingSeconds: 0
 });
 
 if (!props.alert?.data) {

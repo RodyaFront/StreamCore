@@ -6,6 +6,7 @@ export function useAlerts() {
     const alertsQueue = ref<Alert[]>([]);
     const currentAlert = ref<Alert | null>(null);
     const progress = ref<number>(0);
+    const remainingSeconds = ref<number>(0);
     let activeTimer: ReturnType<typeof setTimeout> | null = null;
     let progressInterval: ReturnType<typeof setInterval> | null = null;
     let alertStartTime = 0;
@@ -18,12 +19,14 @@ export function useAlerts() {
     const updateProgress = (): void => {
         if (!currentAlert.value) {
             progress.value = 0;
+            remainingSeconds.value = 0;
             return;
         }
 
         const elapsed = Date.now() - alertStartTime;
         const remaining = Math.max(0, currentAlert.value.duration - elapsed);
         progress.value = Math.min(100, (elapsed / currentAlert.value.duration) * 100);
+        remainingSeconds.value = Math.ceil(remaining / 1000);
 
         if (remaining <= 0) {
             if (progressInterval) {
@@ -46,6 +49,7 @@ export function useAlerts() {
         if (alertsQueue.value.length === 0) {
             currentAlert.value = null;
             progress.value = 0;
+            remainingSeconds.value = 0;
             return;
         }
 
@@ -54,6 +58,7 @@ export function useAlerts() {
             currentAlert.value = nextAlert;
             alertStartTime = Date.now();
             progress.value = 0;
+            remainingSeconds.value = Math.ceil(nextAlert.duration / 1000);
 
             progressInterval = setInterval(() => {
                 updateProgress();
@@ -76,6 +81,7 @@ export function useAlerts() {
         }
         currentAlert.value = null;
         progress.value = 0;
+        remainingSeconds.value = 0;
 
         const LEAVE_ANIMATION_DURATION = 300;
         setTimeout(() => {
@@ -127,6 +133,7 @@ export function useAlerts() {
     return {
         alerts,
         progress,
+        remainingSeconds,
         addAlert,
         cleanup
     };

@@ -6,6 +6,7 @@
                 :key="alert.id"
                 :alert="alert"
                 :progress="progress"
+                :remaining-seconds="remainingSeconds"
                 class="alerts-page__alert"
             />
         </transition-group>
@@ -19,7 +20,7 @@ import { useAlerts } from '@shared/composables/useAlerts';
 import { useSocketConnection } from '@shared/composables/useSocketConnection';
 import type { UserInfoAlertEvent } from '@shared/types/alerts';
 
-const { alerts, progress, addAlert, cleanup } = useAlerts();
+const { alerts, progress, remainingSeconds, addAlert, cleanup } = useAlerts();
 
 useSocketConnection({
     onConnect: () => {

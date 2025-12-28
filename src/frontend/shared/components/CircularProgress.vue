@@ -23,6 +23,7 @@
                 :transform="`rotate(-90 ${center} ${center})`"
             />
         </svg>
+        <span v-if="showSeconds" class="circular-progress__text">{{ remainingSeconds }}</span>
     </div>
 </template>
 
@@ -31,6 +32,7 @@ import { computed } from 'vue';
 
 interface Props {
     progress?: number;
+    remainingSeconds?: number;
     size?: number;
     radius?: number;
     strokeWidth?: number;
@@ -41,10 +43,12 @@ interface Props {
     right?: string;
     bottom?: string;
     left?: string;
+    showSeconds?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     progress: 0,
+    remainingSeconds: 0,
     size: 28,
     radius: 10,
     strokeWidth: 2,
@@ -54,7 +58,8 @@ const props = withDefaults(defineProps<Props>(), {
     top: '4px',
     right: '4px',
     bottom: undefined,
-    left: undefined
+    left: undefined,
+    showSeconds: true
 });
 
 const center = computed(() => props.size / 2);
@@ -92,6 +97,19 @@ const positionClass = computed(() => {
 
 .circular-progress__circle-bg {
     opacity: 0.3;
+}
+
+.circular-progress__text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    font-weight: 600;
+    color: #E4F265;
+    text-shadow: 0 0 4px rgba(228, 242, 101, 0.8);
+    line-height: 1;
+    user-select: none;
 }
 </style>
 
