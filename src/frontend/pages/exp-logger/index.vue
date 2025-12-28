@@ -45,19 +45,20 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import { io } from 'socket.io-client';
-import { SOCKET_CONFIG } from '../../shared/config/socket';
+import { io, Socket } from 'socket.io-client';
+import { SOCKET_CONFIG } from '../../shared/config/socket.js';
 import likeImage from '../../shared/assets/images/like.png';
 import greenBgPlank from '../../shared/assets/images/green_bg_for_plank.png';
 import StarIcon from '../../shared/components/StarIcon.vue';
+import type { ExpSource, Log, ExpLog, LevelUpLog, ExpAddedEvent, LevelUpEvent } from '../../shared/types';
 
 const LOG_TIMEOUT = 60000;
 const MAX_LOGS = 50;
 
-const getSourceText = (source) => {
-    const sourceMap = {
+const getSourceText = (source: ExpSource | string): string => {
+    const sourceMap: Record<ExpSource, string> = {
         'message': 'за сообщение',
         'word_of_day': 'за слово дня',
         'achievement': 'за достижение',
@@ -65,10 +66,10 @@ const getSourceText = (source) => {
         'streak': 'за стрик',
         'unknown': 'за активность'
     };
-    return sourceMap[source] || `за ${source}`;
+    return sourceMap[source as ExpSource] || `за ${source}`;
 };
 
-const getUsernameColor = (username) => {
+const getUsernameColor = (username: string): string => {
     let hash = 0;
     for (let i = 0; i < username.length; i++) {
         hash = username.charCodeAt(i) + ((hash << 5) - hash);
@@ -81,8 +82,8 @@ const getUsernameColor = (username) => {
     return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
 
-const getSourceClasses = (source) => {
-    const sourceClassMap = {
+const getSourceClasses = (source: ExpSource | string): string => {
+    const sourceClassMap: Record<ExpSource, string> = {
         'message': 'text-blue-400 bg-blue-400/30',
         'word_of_day': 'text-purple-400 bg-purple-400/30',
         'achievement': 'text-yellow-400 bg-yellow-400/30',
@@ -91,16 +92,16 @@ const getSourceClasses = (source) => {
         'unknown': 'text-gray-400 bg-gray-400/30'
     };
 
-    return sourceClassMap[source] || 'text-gray-400 bg-gray-400/30';
+    return sourceClassMap[source as ExpSource] || 'text-gray-400 bg-gray-400/30';
 };
 
-const logs = ref([]);
-const logsContainer = ref(null);
-const socket = ref(null);
-const activeTimers = new Map();
+const logs = ref<Log[]>([]);
+const logsContainer = ref<HTMLDivElement | null>(null);
+const socket = ref<Socket | null>(null);
+const activeTimers = new Map<number, ReturnType<typeof setTimeout>>();
 let logIdCounter = 0;
 
-const removeLog = (logId) => {
+const removeLog = (logId: number): void => {
     const index = logs.value.findIndex(l => l.id === logId);
     if (index !== -1) {
         logs.value.splice(index, 1);
@@ -108,7 +109,7 @@ const removeLog = (logId) => {
     activeTimers.delete(logId);
 };
 
-const limitLogs = () => {
+const limitLogs = (): void => {
     if (logs.value.length > MAX_LOGS) {
         const logsToRemove = logs.value.slice(0, logs.value.length - MAX_LOGS);
         logsToRemove.forEach(log => {
@@ -122,7 +123,7 @@ const limitLogs = () => {
     }
 };
 
-const scrollToBottom = () => {
+const scrollToBottom = (): void => {
     nextTick(() => {
         if (logsContainer.value) {
             logsContainer.value.scrollTop = logsContainer.value.scrollHeight;
@@ -130,12 +131,12 @@ const scrollToBottom = () => {
     });
 };
 
-const addLog = (data) => {
-    const log = {
+const addLog = (data: ExpAddedEvent): void => {
+    const log: ExpLog = {
         id: logIdCounter++,
         username: data.username,
         amount: data.amount,
-        source: data.source || 'unknown',
+        source: (data.source || 'unknown') as ExpSource,
         type: 'exp',
         timestamp: Date.now()
     };
@@ -151,22 +152,22 @@ const addLog = (data) => {
     scrollToBottom();
 };
 
-const addLevelUpLog = (data) => {
+const addLevelUpLog = (data: LevelUpEvent): void => {
     // Удаляем последний месседж об опыте от этого пользователя, если он есть
     for (let i = logs.value.length - 1; i >= 0; i--) {
-        if (logs.value[i].type === 'exp' && logs.value[i].username === data.username) {
-            const logToRemove = logs.value[i];
-            const timerId = activeTimers.get(logToRemove.id);
+        const log = logs.value[i];
+        if (log.type === 'exp' && log.username === data.username) {
+            const timerId = activeTimers.get(log.id);
             if (timerId) {
                 clearTimeout(timerId);
-                activeTimers.delete(logToRemove.id);
+                activeTimers.delete(log.id);
             }
             logs.value.splice(i, 1);
             break;
         }
     }
 
-    const log = {
+    const levelUpLog: LevelUpLog = {
         id: logIdCounter++,
         username: data.username,
         type: 'levelup',
@@ -174,13 +175,13 @@ const addLevelUpLog = (data) => {
         timestamp: Date.now()
     };
 
-    logs.value.push(log);
+    logs.value.push(levelUpLog);
     limitLogs();
 
     const timerId = setTimeout(() => {
-        removeLog(log.id);
+        removeLog(levelUpLog.id);
     }, LOG_TIMEOUT);
-    activeTimers.set(log.id, timerId);
+    activeTimers.set(levelUpLog.id, timerId);
 
     scrollToBottom();
 };
@@ -192,11 +193,11 @@ onMounted(() => {
         console.log('[EXP Logger] Подключено к Socket.IO');
     });
 
-    socket.value.on('level:exp:added', (data) => {
+    socket.value.on('level:exp:added', (data: ExpAddedEvent) => {
         addLog(data);
     });
 
-    socket.value.on('level:up', (data) => {
+    socket.value.on('level:up', (data: LevelUpEvent) => {
         addLevelUpLog(data);
     });
 
@@ -204,7 +205,7 @@ onMounted(() => {
         console.log('[EXP Logger] Отключено от Socket.IO');
     });
 
-    socket.value.on('connect_error', (error) => {
+    socket.value.on('connect_error', (error: Error) => {
         console.error('[EXP Logger] Ошибка подключения:', error);
     });
 });

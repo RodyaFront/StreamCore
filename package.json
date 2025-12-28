@@ -5,9 +5,10 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "dev": "vite --config config/vite.config.js",
-    "build": "vite build --config config/vite.config.js",
-    "preview": "vite preview --config config/vite.config.js",
+    "dev": "vite --config config/vite.config.ts",
+    "build": "vue-tsc --noEmit && vite build --config config/vite.config.ts",
+    "preview": "vite preview --config config/vite.config.ts",
+    "type-check": "vue-tsc --noEmit",
     "server": "node src/backend/server.js",
     "view-db": "node scripts/viewDatabase.js",
     "user-stats": "node scripts/getUserStats.js",
@@ -33,11 +34,14 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/vite": "^4.1.18",
+    "@types/node": "^25.0.3",
     "@vitejs/plugin-vue": "^5.0.0",
     "autoprefixer": "^10.4.23",
     "concurrently": "^8.2.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
-    "vite": "^5.0.0"
+    "typescript": "^5.9.3",
+    "vite": "^5.0.0",
+    "vue-tsc": "^3.2.1"
   }
 }
