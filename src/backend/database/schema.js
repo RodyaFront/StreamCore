@@ -21,6 +21,7 @@ try {
 const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS messages (
@@ -64,16 +65,39 @@ db.exec(`
         user_input TEXT,
         redeemed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         fulfilled_at DATETIME,
-        FOREIGN KEY (reward_id) REFERENCES rewards(reward_id) ON DELETE CASCADE
+        FOREIGN KEY (reward_id) REFERENCES rewards(reward_id) ON DELETE CASCADE,
+        FOREIGN KEY (username) REFERENCES user_stats(username) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS user_levels (
+        username TEXT PRIMARY KEY,
+        level INTEGER DEFAULT 1,
+        exp INTEGER DEFAULT 0,
+        exp_to_next_level INTEGER DEFAULT 100,
+        total_exp INTEGER DEFAULT 0,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (username) REFERENCES user_stats(username) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_messages_username ON messages(username);
     CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
     CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel);
+    CREATE INDEX IF NOT EXISTS idx_messages_username_timestamp ON messages(username, timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_redemptions_username ON redemptions(username);
     CREATE INDEX IF NOT EXISTS idx_redemptions_reward_id ON redemptions(reward_id);
     CREATE INDEX IF NOT EXISTS idx_redemptions_redeemed_at ON redemptions(redeemed_at);
     CREATE INDEX IF NOT EXISTS idx_redemptions_status ON redemptions(status);
+    CREATE INDEX IF NOT EXISTS idx_redemptions_username_redeemed ON redemptions(username, redeemed_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_user_stats_message_count ON user_stats(message_count DESC);
+    CREATE INDEX IF NOT EXISTS idx_user_stats_last_seen ON user_stats(last_seen DESC);
+    CREATE INDEX IF NOT EXISTS idx_user_stats_first_seen ON user_stats(first_seen);
+
+    CREATE INDEX IF NOT EXISTS idx_rewards_redemption_count ON rewards(redemption_count DESC);
+    CREATE INDEX IF NOT EXISTS idx_rewards_enabled ON rewards(enabled);
+
+    CREATE INDEX IF NOT EXISTS idx_user_levels_level ON user_levels(level DESC);
+    CREATE INDEX IF NOT EXISTS idx_user_levels_exp ON user_levels(total_exp DESC);
 `);
 
 export { db };

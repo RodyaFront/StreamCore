@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { PDAPage } from '../../../pages/pda';
 import { HomePage } from '../../../pages/home';
+import ExpLoggerPage from '../../../pages/exp-logger';
 
 const routes = [
     {
@@ -12,6 +13,11 @@ const routes = [
         path: '/pda',
         name: 'PDA',
         component: PDAPage
+    },
+    {
+        path: '/exp-logger',
+        name: 'ExpLogger',
+        component: ExpLoggerPage
     }
 ];
 

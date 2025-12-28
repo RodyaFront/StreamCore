@@ -133,9 +133,7 @@ class TwitchIRCClient extends EventEmitter {
             const msg = message.trim().toLowerCase();
             const isCommand = msg.startsWith('!');
 
-            if (username.toLowerCase() === this.username.toLowerCase() && !isCommand) {
-                return;
-            }
+            logMessage(username, username, message, channel, isCommand);
 
             if (msg === '!тест') {
                 if (this.io) {
@@ -166,8 +164,6 @@ class TwitchIRCClient extends EventEmitter {
                     }
                 }
             }
-
-            logMessage(username, username, message, channel, isCommand);
 
             this.emit('message', channel, { username, 'display-name': username }, message, false);
             return;

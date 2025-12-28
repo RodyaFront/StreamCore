@@ -7,14 +7,14 @@ const __dirname = dirname(__filename);
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    resolve(__dirname, '../src/frontend/index.html'),
-    resolve(__dirname, '../src/frontend/**/*.{vue,js,ts,jsx,tsx}'),
+    '../src/frontend/index.html',
+    '../src/frontend/**/*.{vue,js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
       fontFamily: {
         mono: ['Consolas', 'Monaco', 'Courier New', 'Courier', 'monospace'],
-      },
+      }
     },
   },
   plugins: [],

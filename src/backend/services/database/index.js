@@ -1,10 +1,12 @@
 import { db } from '../../database/index.js';
 import { serviceManager, logger } from '../../core/index.js';
+import { runMigrations } from '../../database/migrations.js';
 
 export const DatabaseService = {
     name: 'database',
 
     async init() {
+        runMigrations();
     },
 
     getDb() {

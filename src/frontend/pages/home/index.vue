@@ -3,6 +3,7 @@
         <h1>Stalker PDA Overlay</h1>
         <nav>
             <router-link to="/pda">PDA</router-link>
+            <router-link to="/exp-logger">EXP Logger</router-link>
         </nav>
     </div>
 </template>

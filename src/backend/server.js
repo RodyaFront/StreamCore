@@ -5,6 +5,7 @@ import './services/socketio/index.js';
 import './services/database/index.js';
 import './services/udp/index.js';
 import './services/twitch/index.js';
+import { initializeLevelsEventHandlers } from './services/chat/levels.js';
 
 async function start() {
     try {
@@ -24,6 +25,8 @@ async function start() {
         logger.startTiming('database');
         await serviceManager.initialize('database');
         logger.timedSuccess('Database', 'database', 'data/chat_database.db');
+
+        initializeLevelsEventHandlers();
 
         logger.startTiming('udp');
         await serviceManager.initialize('udp');

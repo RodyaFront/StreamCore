@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath, URL } from 'node:url';
 import { fileURLToPath as f2p } from 'url';
 import { dirname, resolve } from 'path';
@@ -8,7 +9,12 @@ const __filename = f2p(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
-    plugins: [vue()],
+    plugins: [
+        vue(),
+        tailwindcss({
+            base: resolve(__dirname, 'tailwind.config.js'),
+        }),
+    ],
     css: {
         postcss: resolve(__dirname, 'postcss.config.js'),
     },

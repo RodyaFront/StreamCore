@@ -16,6 +16,19 @@ export const SocketIOService = {
                 eventBus.emit('socket:disconnect', { socketId: socket.id });
             });
         });
+
+        // Транслируем события уровней клиентам
+        eventBus.on('level:exp:added', (data) => {
+            if (this.io) {
+                this.io.emit('level:exp:added', data);
+            }
+        });
+
+        eventBus.on('level:up', (data) => {
+            if (this.io) {
+                this.io.emit('level:up', data);
+            }
+        });
     },
 
     getIO() {
