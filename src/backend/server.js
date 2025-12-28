@@ -50,14 +50,36 @@ async function start() {
             }
         };
 
+        const ircTimeout = setTimeout(() => {
+            if (!twitchIrcConnected) {
+                logger.stopSpinner('twitch-irc', false, 'Таймаут подключения IRC');
+                logger.warning('IRC подключение не установлено', 'проверьте токен и права доступа');
+            }
+        }, 10000);
+
         eventBus.once('twitch:irc:connected', () => {
+            clearTimeout(ircTimeout);
             twitchIrcConnected = true;
             logger.stopSpinner('twitch-irc', true, 'IRC подключен');
             checkTwitchReady();
         });
 
+        eventBus.once('twitch:irc:error', (data) => {
+            clearTimeout(ircTimeout);
+            logger.stopSpinner('twitch-irc', false, 'Ошибка подключения IRC');
+            logger.error('Не удалось подключиться к Twitch IRC', data.error);
+        });
+
         logger.spinner('twitch-eventsub', 'Подключение к EventSub...');
+
+        const eventsubTimeout = setTimeout(() => {
+            if (!twitchEventSubConnected) {
+                logger.stopSpinner('twitch-eventsub', false, 'Таймаут подключения EventSub');
+            }
+        }, 10000);
+
         eventBus.once('twitch:eventsub:connected', () => {
+            clearTimeout(eventsubTimeout);
             twitchEventSubConnected = true;
             logger.stopSpinner('twitch-eventsub', true, 'EventSub подключен');
             checkTwitchReady();

@@ -39,7 +39,8 @@ class TwitchIRCClient extends EventEmitter {
             });
 
             socket.setEncoding('utf8');
-            socket.setTimeout(30000);
+            // Twitch требует ответ на PING каждые 5 минут, но ставим таймаут больше
+            socket.setTimeout(0); // Отключаем таймаут, полагаемся на PING/PONG
 
             let resolved = false;
 
@@ -63,6 +64,7 @@ class TwitchIRCClient extends EventEmitter {
             socket.on('error', (err) => {
                 this.connected = false;
                 logger.error('Ошибка сокета Twitch IRC', `${err.code}: ${err.message}`);
+                this.emit('error', err);
                 if (!this.reconnecting && !resolved) {
                     resolved = true;
                     reject(err);
@@ -75,7 +77,9 @@ class TwitchIRCClient extends EventEmitter {
             });
 
             socket.on('timeout', () => {
+                logger.warning('Таймаут соединения', 'переподключение...');
                 socket.destroy();
+                this.connected = false;
                 if (!resolved) {
                     resolved = true;
                     reject(new Error('Connection timeout'));
@@ -90,7 +94,9 @@ class TwitchIRCClient extends EventEmitter {
     handleMessage(line, onJoin) {
         if (line.startsWith('PING')) {
             const pong = line.replace('PING', 'PONG');
-            this.socket.write(`${pong}\r\n`);
+            if (this.socket && !this.socket.destroyed) {
+                this.socket.write(`${pong}\r\n`);
+            }
             return;
         }
 
@@ -169,8 +175,10 @@ class TwitchIRCClient extends EventEmitter {
 
         if (line.includes('Login authentication failed') || line.includes('Invalid NICK')) {
             logger.error('Ошибка аутентификации Twitch IRC', line);
-            this.emit('error', new Error('Authentication failed'));
+            const error = new Error('Authentication failed');
+            this.connected = false;
             this.socket.destroy();
+            this.emit('error', error);
             return;
         }
 
@@ -186,6 +194,7 @@ class TwitchIRCClient extends EventEmitter {
         if (this.reconnecting) return;
 
         if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            logger.error('Достигнуто максимальное количество попыток переподключения', `${MAX_RECONNECT_ATTEMPTS}`);
             this.emit('error', new Error('Max reconnection attempts reached'));
             return;
         }
@@ -196,7 +205,9 @@ class TwitchIRCClient extends EventEmitter {
         reconnectTimeout = setTimeout(() => {
             this.reconnecting = false;
             logger.warning(`Попытка переподключения ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}...`);
-            this.connect().catch(() => {});
+            this.connect().catch((err) => {
+                logger.error('Ошибка при переподключении', err.message);
+            });
         }, RECONNECT_DELAY);
     }
 
@@ -218,9 +229,11 @@ class TwitchIRCClient extends EventEmitter {
 
 async function validateToken(token) {
     try {
+        // Токен уже должен быть без префикса 'oauth:'
+        const cleanToken = token.replace(/^oauth:/i, '');
         const response = await fetch('https://id.twitch.tv/oauth2/validate', {
             headers: {
-                'Authorization': `OAuth ${token.replace('oauth:', '')}`
+                'Authorization': `OAuth ${cleanToken}`
             }
         });
 
@@ -228,9 +241,12 @@ async function validateToken(token) {
             const data = await response.json();
             return data;
         } else {
+            const errorText = await response.text().catch(() => 'Unknown error');
+            logger.warning('Ошибка валидации токена', `HTTP ${response.status}: ${errorText}`);
             return null;
         }
     } catch (error) {
+        logger.warning('Ошибка при валидации токена', error.message);
         return null;
     }
 }
@@ -249,15 +265,13 @@ export async function initTwitch(io) {
     const tokenData = await validateToken(tokenWithoutPrefix);
 
     if (!tokenData) {
-        logger.error('Не удалось валидировать токен');
-        return;
-    }
-
-    const requiredScopes = ['chat:read', 'chat:edit'];
-    const hasRequiredScopes = requiredScopes.every(scope => tokenData.scopes?.includes(scope));
-    if (!hasRequiredScopes) {
-        logger.error('Токен не имеет необходимых прав', `Требуются: ${requiredScopes.join(', ')}`);
-        return;
+        logger.warning('Не удалось валидировать токен через API', 'попробую подключиться напрямую');
+    } else {
+        const requiredScopes = ['chat:read', 'chat:edit'];
+        const hasRequiredScopes = requiredScopes.every(scope => tokenData.scopes?.includes(scope));
+        if (!hasRequiredScopes) {
+            logger.warning('Токен не имеет всех необходимых прав', `Требуются: ${requiredScopes.join(', ')}, попробую подключиться`);
+        }
     }
 
     if (!oauthToken.startsWith('oauth:')) {
@@ -273,11 +287,17 @@ export async function initTwitch(io) {
         eventBus.emit('twitch:irc:connected', { channel });
     });
 
+    client.on('error', (err) => {
+        logger.error('Ошибка Twitch IRC клиента', err.message);
+        eventBus.emit('twitch:irc:error', { error: err.message });
+    });
+
     try {
         await client.connect();
         twitchClient = client;
     } catch (err) {
-        logger.error('Ошибка при подключении', err.message);
+        logger.error('Ошибка при подключении к Twitch IRC', err.message);
+        logger.warning('IRC подключение не установлено', 'проверьте токен и права доступа');
         twitchClient = client;
     }
 }

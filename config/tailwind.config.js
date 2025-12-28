@@ -1,10 +1,14 @@
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
-    "./*.{vue,js,ts,jsx,tsx}",
-    "./**/*.vue"
+    resolve(__dirname, '../src/frontend/index.html'),
+    resolve(__dirname, '../src/frontend/**/*.{vue,js,ts,jsx,tsx}'),
   ],
   theme: {
     extend: {

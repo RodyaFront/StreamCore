@@ -1,5 +1,7 @@
 import dgram from 'dgram';
 
+import { logger } from '../core/logger.js';
+
 export function createUdpServer(io) {
     const udpServer = dgram.createSocket('udp4');
 
@@ -19,7 +21,16 @@ export function createUdpServer(io) {
         }
     });
 
-    udpServer.bind(3002, () => {});
+    udpServer.on('error', (err) => {
+        logger.error('[UDP] Ошибка сервера', err.message);
+    });
+
+    udpServer.on('listening', () => {
+        const address = udpServer.address();
+        logger.success('[UDP] Сервер запущен', `порт ${address.port}`);
+    });
+
+    udpServer.bind(3002);
 
     return udpServer;
 }

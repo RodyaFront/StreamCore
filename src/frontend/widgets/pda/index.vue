@@ -6,7 +6,7 @@
             :style="baseContainerStyle"
         >
             <div class="pda-tilt-wrapper" :style="tiltStyle">
-                <img src="/assets/pda.png" alt="КПК" class="pda-image">
+                <img :src="pdaImage" alt="КПК" class="pda-image">
                 <div class="pda-screen" :style="screenStyle">
                 <div class="pda-screen__content">
                     <slot name="screen-content">
@@ -27,6 +27,12 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, provide, watch } from 'vue';
 import { io } from 'socket.io-client';
 import { SOCKET_CONFIG } from '../../shared/config/socket';
+import pdaImage from '../../shared/assets/pda.png';
+import pdaOpenSound from '../../shared/assets/pda_open.mp3';
+import pdaHideSound from '../../shared/assets/pda_hide.mp3';
+import keyboardClickSound1 from '../../shared/assets/keyboard_click.mp3';
+import keyboardClickSound2 from '../../shared/assets/keyboard_click_2.mp3';
+import pdaScreenOverlay from '../../shared/assets/pda_screen_overlay.png';
 
 const DEFAULT_SCREEN_CONFIG = {
     width: '77%',
@@ -67,15 +73,15 @@ const initSocket = () => {
 };
 
 const initSound = () => {
-    openSound.value = new Audio('/assets/pda_open.mp3');
+    openSound.value = new Audio(pdaOpenSound);
     openSound.value.volume = 0.2;
 
-    closeSound.value = new Audio('/assets/pda_hide.mp3');
+    closeSound.value = new Audio(pdaHideSound);
     closeSound.value.volume = 0.2;
 
-    const sound1 = new Audio('/assets/keyboard_click.mp3');
+    const sound1 = new Audio(keyboardClickSound1);
     sound1.volume = 0.1;
-    const sound2 = new Audio('/assets/keyboard_click_2.mp3');
+    const sound2 = new Audio(keyboardClickSound2);
     sound2.volume = 0.1;
 
     keyboardClickSounds.value = [sound1, sound2];
@@ -299,7 +305,7 @@ onBeforeUnmount(() => {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('/assets/pda_screen_overlay.png');
+    background-image: v-bind(`url('${pdaScreenOverlay}')`);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
