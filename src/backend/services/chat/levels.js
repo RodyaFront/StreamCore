@@ -12,9 +12,11 @@ import { getUserStats, createUserStats } from '../../database/queries/users.js';
 import { db } from '../../database/schema.js';
 import { eventBus } from '../../core/index.js';
 import { logger } from '../../core/logger.js';
+import { QUEUE_CLEANUP_DELAY, MAX_SAFE_EXP } from './config.js';
 
 // Очереди для последовательной обработки наград одного пользователя
 const userQueues = new Map();
+const cleanupTimers = new Map();
 
 /**
  * Базовая стоимость опыта за уровень
@@ -142,6 +144,28 @@ export function initializeLevel(username) {
  */
 export async function addExp(username, amount, source = 'unknown', pointsSpent = null) {
     try {
+        // Валидация входных параметров
+        if (!username || typeof username !== 'string' || username.trim() === '') {
+            logger.error(`[LEVELS] Некорректное имя пользователя: ${username}`);
+            return null;
+        }
+
+        if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
+            logger.error(`[LEVELS] Некорректное количество опыта: ${amount} для пользователя ${username}`);
+            return null;
+        }
+
+        // Проверка на переполнение (максимальное значение для SQLite INTEGER: 2^63 - 1)
+        if (amount > MAX_SAFE_EXP) {
+            logger.error(`[LEVELS] Слишком большое количество опыта: ${amount} для пользователя ${username}`);
+            return null;
+        }
+
+        if (pointsSpent !== null && (typeof pointsSpent !== 'number' || !Number.isFinite(pointsSpent) || pointsSpent < 0)) {
+            logger.warning(`[LEVELS] Некорректное количество баллов: ${pointsSpent}, игнорируем`);
+            pointsSpent = null;
+        }
+
         const normalizedUsername = username.toLowerCase();
 
         // Создаем очередь для этого пользователя, если её нет
@@ -178,6 +202,13 @@ export async function addExp(username, amount, source = 'unknown', pointsSpent =
 
                 const oldLevel = levelData.level;
                 const oldTotalExp = levelData.total_exp;
+
+                // Проверка на переполнение total_exp
+                if (oldTotalExp > MAX_SAFE_EXP - amount) {
+                    logger.error(`[LEVELS] Переполнение total_exp для ${normalizedUsername}: ${oldTotalExp} + ${amount}`);
+                    return null;
+                }
+
                 const newTotalExp = oldTotalExp + amount;
 
                 // Рассчитываем новый уровень
@@ -220,22 +251,64 @@ export async function addExp(username, amount, source = 'unknown', pointsSpent =
             return transaction();
         }).catch((error) => {
             logger.error(`[LEVELS] Ошибка в очереди для ${normalizedUsername}:`, error);
+            // Восстанавливаем очередь, чтобы не блокировать последующие операции
+            // Сбрасываем на resolved промис, чтобы следующий вызов мог начаться
+            userQueues.set(normalizedUsername, Promise.resolve());
+            // Очищаем таймер очистки, если он был установлен
+            const existingTimer = cleanupTimers.get(normalizedUsername);
+            if (existingTimer) {
+                clearTimeout(existingTimer);
+                cleanupTimers.delete(normalizedUsername);
+            }
             throw error;
         });
 
         // Обновляем очередь для следующего вызова
         userQueues.set(normalizedUsername, currentOperation);
 
+        // Отменяем предыдущий таймер очистки, если он был
+        const existingTimer = cleanupTimers.get(normalizedUsername);
+        if (existingTimer) {
+            clearTimeout(existingTimer);
+        }
+
+        // Очищаем очередь через некоторое время после завершения (предотвращение утечки памяти)
+        currentOperation.finally(() => {
+            // Очищаем очередь через QUEUE_CLEANUP_DELAY неактивности
+            const cleanupTimer = setTimeout(() => {
+                // Используем атомарную проверку: если очередь не изменилась, удаляем её
+                const currentQueue = userQueues.get(normalizedUsername);
+                if (currentQueue === currentOperation) {
+                    userQueues.delete(normalizedUsername);
+                    cleanupTimers.delete(normalizedUsername);
+                }
+            }, QUEUE_CLEANUP_DELAY);
+
+            // Сохраняем ссылку на таймер для возможности отмены
+            cleanupTimers.set(normalizedUsername, cleanupTimer);
+        });
+
         // Ждем завершения текущей операции
         const result = await currentOperation;
         if (!result) {
-            logger.error(`[LEVELS] Ошибка при обработке опыта для ${username}`);
+            logger.error(`[LEVELS] Ошибка при обработке опыта для ${username} - транзакция вернула null`);
             return null;
         }
 
         const { oldLevel, newLevel, oldTotalExp, newTotalExp, newExp, newExpToNextLevel } = result;
 
-        // Отправляем события после успешного обновления БД
+        // Валидация результата перед отправкой событий
+        if (typeof newLevel !== 'number' || !Number.isFinite(newLevel) || newLevel < 1) {
+            logger.error(`[LEVELS] Некорректный уровень в результате для ${username}: ${newLevel}`);
+            return null;
+        }
+
+        if (typeof newTotalExp !== 'number' || !Number.isFinite(newTotalExp) || newTotalExp < 0) {
+            logger.error(`[LEVELS] Некорректный total_exp в результате для ${username}: ${newTotalExp}`);
+            return null;
+        }
+
+        // Отправляем события только после успешного обновления БД и валидации
         if (newLevel > oldLevel) {
             // Отправляем событие о повышении уровня
             eventBus.emit('level:up', {

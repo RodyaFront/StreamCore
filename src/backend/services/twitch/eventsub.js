@@ -3,7 +3,7 @@ import {
 } from '@twurple/auth';
 import { ApiClient } from '@twurple/api';
 import { EventSubWsListener } from '@twurple/eventsub-ws';
-import { upsertReward, insertRedemption } from '../../database/queries/rewards.js';
+import { upsertReward, insertRedemption, getRedemptionById } from '../../database/queries/rewards.js';
 import { getUserInfoForAlert } from '../../database/queries/alerts.js';
 import { getUserLevel } from '../../database/queries/levels.js';
 import { getUserStats } from '../../database/queries/users.js';
@@ -95,6 +95,20 @@ export async function initTwitchEventSub() {
                     ? event.redemptionDate.toISOString()
                     : (event.redemptionDate ? String(event.redemptionDate) : new Date().toISOString());
 
+                // Валидация rewardCost перед обработкой
+                if (!Number.isFinite(rewardCost) || rewardCost < 0) {
+                    logger.error(`[REWARDS] Некорректная стоимость награды: ${rewardCost} для ${username}`);
+                    return;
+                }
+
+                // Проверяем, не обработана ли уже эта награда (защита от дубликатов)
+                // Делаем это перед upsertReward, чтобы не обновлять reward без необходимости
+                const existingRedemption = getRedemptionById.get(redemptionId);
+                if (existingRedemption) {
+                    logger.warning(`[REWARDS] Награда ${redemptionId} уже была обработана ранее, пропускаем`);
+                    return;
+                }
+
                 upsertReward.run(
                     rewardId,
                     rewardTitle,
@@ -103,7 +117,8 @@ export async function initTwitchEventSub() {
                     rewardPrompt
                 );
 
-                insertRedemption.run(
+                // Пытаемся вставить redemption. ON CONFLICT DO NOTHING защищает от дубликатов
+                const redemptionResult = insertRedemption.run(
                     redemptionId,
                     rewardId,
                     username,
@@ -113,11 +128,21 @@ export async function initTwitchEventSub() {
                     redemptionDate
                 );
 
+                // Проверяем, была ли вставка успешной (защита от дубликатов на уровне БД)
+                // Это дополнительная защита на случай race condition
+                if (redemptionResult.changes === 0) {
+                    logger.warning(`[REWARDS] Награда ${redemptionId} не была вставлена (возможно, дубликат), пропускаем`);
+                    return;
+                }
+
                 // Конвертируем баллы в опыт: 1 балл = 1 опыт
+                // Вызываем только если награда была успешно сохранена
                 if (rewardCost > 0) {
                     addExp(username, rewardCost, 'reward', rewardCost).then((expResult) => {
                         if (expResult) {
                             logger.info(`[REWARDS] ${username} получил ${rewardCost} опыта за награду "${rewardTitle}" (${rewardCost} баллов)`);
+                        } else {
+                            logger.warning(`[REWARDS] Не удалось добавить опыт для ${username} за награду "${rewardTitle}"`);
                         }
                     }).catch((error) => {
                         logger.error(`[REWARDS] Ошибка при добавлении опыта для ${username}:`, error);

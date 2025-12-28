@@ -49,3 +49,9 @@ export const getTopRewards = db.prepare(`
     LIMIT ?
 `);
 
+export const getRedemptionById = db.prepare(`
+    SELECT redemption_id, reward_id, username, cost, status, redeemed_at
+    FROM redemptions
+    WHERE redemption_id = ?
+`);
+
