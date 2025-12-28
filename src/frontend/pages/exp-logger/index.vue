@@ -2,7 +2,11 @@
     <div class="h-screen relative">
         <div
             ref="logsContainer"
-            class="h-screen p-4 flex flex-col justify-end overflow-y-auto overflow-x-hidden"
+            class="h-screen p-4 flex flex-col justify-end overflow-y-hidden overflow-x-hidden"
+            :style="{
+                maskImage: `linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.1) 15%, rgba(0, 0, 0, 0.4) 25%, rgba(0, 0, 0, 0.8) 35%, black ${EXP_LOGGER_CONSTANTS.MASK_OPAQUE_END}, black 100%)`,
+                WebkitMaskImage: `linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.1) 15%, rgba(0, 0, 0, 0.4) 25%, rgba(0, 0, 0, 0.8) 35%, black ${EXP_LOGGER_CONSTANTS.MASK_OPAQUE_END}, black 100%)`
+            }"
         >
             <transition-group name="exp-log" tag="div" class="flex flex-col gap-6">
             <div
@@ -12,7 +16,7 @@
             >
                 <template v-if="log.type === 'levelup'">
                     <div
-                        class="inline-flex items-center gap-2 p-4 rounded-lg relative min-h-[88px] pl-28 pr-8 mb-4 mt-8"
+                        class="inline-flex items-center gap-2 p-4 rounded-lg relative min-h-[88px] pl-28 pr-8 mb-2 mt-4 bg-green-950/80"
                         :style="{ backgroundImage: `url(${greenBgPlank})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }"
                     >
                         <img :src="likeImage" alt="Level Up" class="w-32 scale-[0.9] absolute -top-10 -left-[22px]">
@@ -53,7 +57,7 @@ import { ref, onBeforeUnmount } from 'vue';
 import likeImage from '@shared/assets/images/like.png';
 import greenBgPlank from '@shared/assets/images/green_bg_for_plank.png';
 import StarIcon from '@shared/components/StarIcon.vue';
-import { UI_TEXT } from '@shared/constants/expLogger';
+import { UI_TEXT, EXP_LOGGER_CONSTANTS } from '@shared/constants/expLogger';
 import { useExpLogger } from '@shared/composables/useExpLogger';
 import { useSocketConnection } from '@shared/composables/useSocketConnection';
 import { useUsernameColor } from '@shared/composables/useUsernameColor';
@@ -85,3 +89,34 @@ onBeforeUnmount(() => {
 });
 </script>
 
+<style scoped>
+.exp-log-enter-active {
+    transition: all 0.4s ease-out;
+}
+
+.exp-log-enter-from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+}
+
+.exp-log-enter-to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.exp-log-leave-active {
+    transition: opacity 0.3s ease-in;
+}
+
+.exp-log-leave-from {
+    opacity: 1;
+}
+
+.exp-log-leave-to {
+    opacity: 0;
+}
+
+.exp-log-move {
+    transition: transform 0.4s ease;
+}
+</style>

@@ -13,6 +13,11 @@ import { eventBus } from '../../core/index.js';
 
 let listener = null;
 let apiClient = null;
+let authProvider = null;
+
+export function getAuthProvider() {
+    return authProvider;
+}
 
 export async function initTwitchEventSub() {
     const clientId = process.env.CLIENT_ID;
@@ -27,9 +32,14 @@ export async function initTwitchEventSub() {
     }
 
     try {
-        const authProvider = new RefreshingAuthProvider({
+        authProvider = new RefreshingAuthProvider({
             clientId,
-            clientSecret
+            clientSecret,
+            onRefresh: async (userId, newTokenData) => {
+                logger.info('[REWARDS] Токен обновлен', `для пользователя ${userId}`);
+                // Можно сохранить новые токены в переменные окружения или БД, если нужно
+                // Но RefreshingAuthProvider сам управляет токенами в памяти
+            }
         });
 
         apiClient = new ApiClient({ authProvider });
@@ -40,16 +50,24 @@ export async function initTwitchEventSub() {
             throw new Error('Не удалось получить информацию о пользователе');
         }
 
-        await authProvider.addUserForToken(
-            {
-                accessToken,
-                refreshToken,
-                expiresIn: 14400,
-                obtainmentTimestamp: Date.now(),
-                scope: ['channel:read:redemptions', 'channel:manage:redemptions']
-            },
-            user.id
-        );
+        // Убираем obtainmentTimestamp - пусть RefreshingAuthProvider сам определит,
+        // нужно ли обновлять токен. Если токен истек, он автоматически обновится.
+        try {
+            await authProvider.addUserForToken(
+                {
+                    accessToken,
+                    refreshToken,
+                    expiresIn: 14400,
+                    // obtainmentTimestamp не указываем - пусть система сама определит
+                    scope: ['channel:read:redemptions', 'channel:manage:redemptions']
+                },
+                user.id
+            );
+        } catch (tokenError) {
+            logger.error('[REWARDS] Ошибка при добавлении токена', tokenError.message);
+            logger.warning('[REWARDS] Возможно, токены истекли', 'проверьте ACCESS_TOKEN и REFRESH_TOKEN в .env');
+            throw tokenError;
+        }
 
         listener = new EventSubWsListener({ apiClient });
         await listener.start();
