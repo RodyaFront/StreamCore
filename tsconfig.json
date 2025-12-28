@@ -23,7 +23,8 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/frontend/*"]
+      "@/*": ["src/frontend/*"],
+      "@shared/*": ["src/frontend/shared/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "config/**/*.ts"],

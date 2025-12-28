@@ -20,7 +20,8 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            '@': fileURLToPath(new URL('../src/frontend', import.meta.url))
+            '@': fileURLToPath(new URL('../src/frontend', import.meta.url)),
+            '@shared': fileURLToPath(new URL('../src/frontend/shared', import.meta.url))
         }
     },
     root: 'src/frontend',
