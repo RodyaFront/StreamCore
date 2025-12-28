@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.db
+*.db-shm
+*.db-wal
+chat_database.db*
+data/*.db*
+data/*.db-shm
+data/*.db-wal
+!data/.gitkeep
+vite.config.js.timestamp-*
+*.mjs.timestamp-*
+
