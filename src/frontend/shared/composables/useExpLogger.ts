@@ -61,6 +61,10 @@ export function useExpLogger(logsContainer: Ref<HTMLDivElement | null>) {
                 timestamp: Date.now()
             };
 
+            if (data.pointsSpent !== undefined && data.pointsSpent > 0) {
+                log.pointsSpent = Math.max(0, Math.floor(data.pointsSpent));
+            }
+
             logs.value.push(log);
             limitLogs();
 

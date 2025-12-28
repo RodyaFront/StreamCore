@@ -1,4 +1,4 @@
-export type ExpSource = 'message' | 'word_of_day' | 'achievement' | 'quest' | 'streak' | 'unknown';
+export type ExpSource = 'message' | 'word_of_day' | 'achievement' | 'quest' | 'streak' | 'reward' | 'unknown';
 
 export interface ExpLog {
     id: number;
@@ -7,6 +7,7 @@ export interface ExpLog {
     source: ExpSource;
     type: 'exp';
     timestamp: number;
+    pointsSpent?: number;
 }
 
 export interface LevelUpLog {
@@ -26,6 +27,7 @@ export interface ExpAddedEvent {
     oldTotalExp: number;
     newTotalExp: number;
     level: number;
+    pointsSpent?: number;
 }
 
 export interface LevelUpEvent {

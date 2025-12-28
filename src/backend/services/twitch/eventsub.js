@@ -7,6 +7,7 @@ import { upsertReward, insertRedemption } from '../../database/queries/rewards.j
 import { getUserInfoForAlert } from '../../database/queries/alerts.js';
 import { getUserLevel } from '../../database/queries/levels.js';
 import { getUserStats } from '../../database/queries/users.js';
+import { addExp } from '../chat/levels.js';
 import { logger } from '../../core/logger.js';
 import { eventBus } from '../../core/index.js';
 
@@ -93,6 +94,14 @@ export async function initTwitchEventSub() {
                     userInput,
                     redemptionDate
                 );
+
+                // Конвертируем баллы в опыт: 1 балл = 1 опыт
+                if (rewardCost > 0) {
+                    const expResult = addExp(username, rewardCost, 'reward', rewardCost);
+                    if (expResult) {
+                        logger.info(`[REWARDS] ${username} получил ${rewardCost} опыта за награду "${rewardTitle}" (${rewardCost} баллов)`);
+                    }
+                }
 
                 if (rewardTitle.toLowerCase().includes('обо мне') || rewardTitle.toLowerCase().includes('about me')) {
                     try {

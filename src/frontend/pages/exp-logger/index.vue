@@ -36,6 +36,9 @@
                                 class="inline-block px-3 py-1 rounded-full"
                             >
                                 {{ getSourceText(log.source) }}</span>
+                            <span v-if="log.pointsSpent" class="opacity-50 text-sm">
+                                (потратив {{ log.pointsSpent }} баллов)
+                            </span>
                         </div>
                     </div>
                 </template>

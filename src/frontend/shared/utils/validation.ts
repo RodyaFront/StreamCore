@@ -1,7 +1,7 @@
 import type { ExpAddedEvent, LevelUpEvent, ExpSource } from '@shared/types';
 import type { UserInfoAlertEvent } from '@shared/types/alerts';
 
-const VALID_EXP_SOURCES: ExpSource[] = ['message', 'word_of_day', 'achievement', 'quest', 'streak', 'unknown'];
+const VALID_EXP_SOURCES: ExpSource[] = ['message', 'word_of_day', 'achievement', 'quest', 'streak', 'reward', 'unknown'];
 
 export function isValidExpAddedEvent(data: unknown): data is ExpAddedEvent {
     if (!data || typeof data !== 'object') {
@@ -32,6 +32,12 @@ export function isValidExpAddedEvent(data: unknown): data is ExpAddedEvent {
 
     if (typeof event.level !== 'number' || event.level < 1 || !Number.isInteger(event.level)) {
         return false;
+    }
+
+    if (event.pointsSpent !== undefined) {
+        if (typeof event.pointsSpent !== 'number' || event.pointsSpent < 0 || !Number.isFinite(event.pointsSpent)) {
+            return false;
+        }
     }
 
     return true;

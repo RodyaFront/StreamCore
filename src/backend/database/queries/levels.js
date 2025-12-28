@@ -50,12 +50,14 @@ export const updateUserExp = db.prepare(`
  * @param {number} level - новый уровень
  * @param {number} exp - текущий опыт
  * @param {number} exp_to_next_level - опыт до следующего уровня
+ * @param {number} total_exp - общий накопленный опыт
  */
 export const updateUserLevel = db.prepare(`
     UPDATE user_levels
     SET level = ?,
         exp = ?,
         exp_to_next_level = ?,
+        total_exp = ?,
         updated_at = CURRENT_TIMESTAMP
     WHERE username = ?
 `);

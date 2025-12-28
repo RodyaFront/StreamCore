@@ -133,9 +133,10 @@ export function initializeLevel(username) {
  * @param {string} username - имя пользователя
  * @param {number} amount - количество опыта для добавления
  * @param {string} source - источник опыта (например, 'message', 'word_of_day', 'achievement')
+ * @param {number} pointsSpent - количество потраченных баллов (опционально, для наград)
  * @returns {object|null} - обновленные данные уровня или null при ошибке
  */
-export function addExp(username, amount, source = 'unknown') {
+export function addExp(username, amount, source = 'unknown', pointsSpent = null) {
     try {
         const normalizedUsername = username.toLowerCase();
 
@@ -164,7 +165,8 @@ export function addExp(username, amount, source = 'unknown') {
                 normalizedUsername,
                 newLevel,
                 newExp,
-                newExpToNextLevel
+                newExpToNextLevel,
+                newTotalExp
             );
 
             // Отправляем событие о повышении уровня
@@ -187,14 +189,20 @@ export function addExp(username, amount, source = 'unknown') {
         }
 
         // Отправляем событие о добавлении опыта
-        eventBus.emit('level:exp:added', {
+        const eventData = {
             username: normalizedUsername,
             amount,
             source,
             oldTotalExp,
             newTotalExp,
             level: newLevel
-        });
+        };
+
+        if (pointsSpent !== null && pointsSpent > 0) {
+            eventData.pointsSpent = pointsSpent;
+        }
+
+        eventBus.emit('level:exp:added', eventData);
 
         return {
             username: normalizedUsername,

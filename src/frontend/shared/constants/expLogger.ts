@@ -12,6 +12,7 @@ export const SOURCE_TEXT_MAP = {
     'achievement': 'за достижение',
     'quest': 'за квест',
     'streak': 'за стрик',
+    'reward': 'за награду',
     'unknown': 'за активность'
 } as const;
 
@@ -21,6 +22,7 @@ export const SOURCE_CLASSES_MAP = {
     'achievement': 'text-yellow-400 bg-yellow-400/30',
     'quest': 'text-green-400 bg-green-400/30',
     'streak': 'text-red-400 bg-red-400/30',
+    'reward': 'text-amber-400 bg-amber-400/30',
     'unknown': 'text-gray-400 bg-gray-400/30'
 } as const;
 
