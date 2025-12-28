@@ -5,6 +5,7 @@
                 v-for="alert in alerts"
                 :key="alert.id"
                 :alert="alert"
+                :progress="progress"
                 class="alerts-page__alert"
             />
         </transition-group>
@@ -18,7 +19,7 @@ import { useAlerts } from '@shared/composables/useAlerts';
 import { useSocketConnection } from '@shared/composables/useSocketConnection';
 import type { UserInfoAlertEvent } from '@shared/types/alerts';
 
-const { alerts, addAlert, cleanup } = useAlerts();
+const { alerts, progress, addAlert, cleanup } = useAlerts();
 
 useSocketConnection({
     onConnect: () => {

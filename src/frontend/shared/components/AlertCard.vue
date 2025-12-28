@@ -1,8 +1,8 @@
 <template>
     <div class="glow-wrapper">
         <div
-            v-for="(firefly, index) in fireflyPositions"
-            :key="index"
+            v-for="firefly in fireflyPositions"
+            :key="firefly.id"
             class="firefly"
             :style="{
                 top: firefly.top,
@@ -16,14 +16,16 @@
         ></div>
         <template v-if="alert.data.type === 'user_info'">
             <div class="flex rounded-2xl relative overflow-hidden bg-green-950/80">
+                <CircularProgress :progress="progress" class="top-3 right-3"/>
                 <img
                     :src="panelBgGrass"
-                    alt="Background"
+                    alt=""
+                    aria-hidden="true"
                     class="absolute inset-0 w-full h-full object-cover z-0"
                 >
-                <div class="absolute inset-0 bg-[#01241E] opacity-50 z-[1]"></div>
+                <div class="absolute inset-0 bg-[#01241E] opacity-50 z-1"></div>
                 <div class="flex flex-col justify-end z-10 self-stretch">
-                    <img :src="teoLearningImage" alt="Teo Learning" class="h-full max-w-42 object-contain object-bottom pt-4 pl-4">
+                    <img :src="teoLearningImage" alt="" aria-hidden="true" class="h-full max-w-42 object-contain object-bottom pt-4 pl-4">
                 </div>
                 <div class="relative z-10 text-white py-6 pr-8 pl-8">
                     <span
@@ -51,75 +53,132 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, shallowRef, onMounted } from 'vue';
 import type { Alert } from '@shared/types/alerts';
 import { useUsernameColor } from '@shared/composables/useUsernameColor';
 import teoLearningImage from '@shared/assets/images/teo_learning.png';
 import panelBgGrass from '@shared/assets/images/panel_bg_grass.png';
+import CircularProgress from './CircularProgress.vue';
 
 interface Props {
     alert: Alert;
+    progress?: number;
 }
 
-interface FireflyPosition {
-    top?: string;
-    left?: string;
-    right?: string;
-    bottom?: string;
+type FireflyPositionTop = {
+    top: string;
+    left: string;
+    right?: never;
+    bottom?: never;
+};
+
+type FireflyPositionRight = {
+    top: string;
+    right: string;
+    left?: never;
+    bottom?: never;
+};
+
+type FireflyPositionBottom = {
+    bottom: string;
+    left: string;
+    top?: never;
+    right?: never;
+};
+
+type FireflyPositionLeft = {
+    top: string;
+    left: string;
+    right?: never;
+    bottom?: never;
+};
+
+type FireflyPosition = (FireflyPositionTop | FireflyPositionRight | FireflyPositionBottom | FireflyPositionLeft) & {
     zIndex: number;
     animationDelay: number;
     animationDuration: number;
+    id: string;
+};
+
+const FIREFLY_COUNT = 15;
+const Z_INDEX_OPTIONS = [-2, -1, 2, 3] as const;
+const ANIMATION_DURATIONS = [2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5] as const;
+const EDGE_OFFSET_MIN = -10;
+const EDGE_OFFSET_MAX = -20;
+const ANIMATION_DELAY_MAX = 3;
+const POSITION_THRESHOLDS = {
+    TOP: 0.25,
+    RIGHT: 0.5,
+    BOTTOM: 0.75
+} as const;
+
+const props = withDefaults(defineProps<Props>(), {
+    progress: 0
+});
+
+if (!props.alert?.data) {
+    console.warn('[AlertCard] Alert data is missing');
 }
 
-const props = defineProps<Props>();
 const { getUsernameColor } = useUsernameColor();
 
-const fireflyPositions = ref<FireflyPosition[]>([]);
+const fireflyPositions = shallowRef<FireflyPosition[]>([]);
 
-function generateFireflyPositions(): FireflyPosition[] {
+function getRandomElement<T extends readonly number[]>(array: T): T[number] {
+    return array[Math.floor(Math.random() * array.length)];
+}
+
+function generateFireflyPositions(alertId: number): FireflyPosition[] {
     const positions: FireflyPosition[] = [];
-    const zIndexOptions = [-2, -1, 2, 3];
-    const animationDurations = [2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5];
 
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < FIREFLY_COUNT; i++) {
         const positionType = Math.random();
+        const zIndex = getRandomElement(Z_INDEX_OPTIONS);
+        const animationDuration = getRandomElement(ANIMATION_DURATIONS);
+        const animationDelay = Math.random() * ANIMATION_DELAY_MAX;
+        const id = `firefly-${alertId}-${i}`;
+
         let position: FireflyPosition;
 
-        if (positionType < 0.25) {
-            // На верхнем краю или за ним
+        if (positionType < POSITION_THRESHOLDS.TOP) {
+            const isOnEdge = Math.random() < 0.5;
             position = {
-                top: Math.random() < 0.5 ? '0' : `${-10 - Math.random() * 10}px`,
+                top: isOnEdge ? '0' : `${EDGE_OFFSET_MIN + Math.random() * (EDGE_OFFSET_MAX - EDGE_OFFSET_MIN)}px`,
                 left: `${Math.random() * 100}%`,
-                zIndex: zIndexOptions[Math.floor(Math.random() * zIndexOptions.length)],
-                animationDelay: Math.random() * 3,
-                animationDuration: animationDurations[Math.floor(Math.random() * animationDurations.length)]
+                zIndex,
+                animationDelay,
+                animationDuration,
+                id
             };
-        } else if (positionType < 0.5) {
-            // На правом краю или за ним
+        } else if (positionType < POSITION_THRESHOLDS.RIGHT) {
+            const isOnEdge = Math.random() < 0.5;
             position = {
                 top: `${Math.random() * 100}%`,
-                right: Math.random() < 0.5 ? '0' : `${-10 - Math.random() * 10}px`,
-                zIndex: zIndexOptions[Math.floor(Math.random() * zIndexOptions.length)],
-                animationDelay: Math.random() * 3,
-                animationDuration: animationDurations[Math.floor(Math.random() * animationDurations.length)]
+                right: isOnEdge ? '0' : `${EDGE_OFFSET_MIN + Math.random() * (EDGE_OFFSET_MAX - EDGE_OFFSET_MIN)}px`,
+                zIndex,
+                animationDelay,
+                animationDuration,
+                id
             };
-        } else if (positionType < 0.75) {
-            // На нижнем краю или за ним
+        } else if (positionType < POSITION_THRESHOLDS.BOTTOM) {
+            const isOnEdge = Math.random() < 0.5;
             position = {
-                bottom: Math.random() < 0.5 ? '0' : `${-10 - Math.random() * 10}px`,
+                bottom: isOnEdge ? '0' : `${EDGE_OFFSET_MIN + Math.random() * (EDGE_OFFSET_MAX - EDGE_OFFSET_MIN)}px`,
                 left: `${Math.random() * 100}%`,
-                zIndex: zIndexOptions[Math.floor(Math.random() * zIndexOptions.length)],
-                animationDelay: Math.random() * 3,
-                animationDuration: animationDurations[Math.floor(Math.random() * animationDurations.length)]
+                zIndex,
+                animationDelay,
+                animationDuration,
+                id
             };
         } else {
-            // На левом краю или за ним
+            const isOnEdge = Math.random() < 0.5;
             position = {
                 top: `${Math.random() * 100}%`,
-                left: Math.random() < 0.5 ? '0' : `${-10 - Math.random() * 10}px`,
-                zIndex: zIndexOptions[Math.floor(Math.random() * zIndexOptions.length)],
-                animationDelay: Math.random() * 3,
-                animationDuration: animationDurations[Math.floor(Math.random() * animationDurations.length)]
+                left: isOnEdge ? '0' : `${EDGE_OFFSET_MIN + Math.random() * (EDGE_OFFSET_MAX - EDGE_OFFSET_MIN)}px`,
+                zIndex,
+                animationDelay,
+                animationDuration,
+                id
             };
         }
 
@@ -130,38 +189,62 @@ function generateFireflyPositions(): FireflyPosition[] {
 }
 
 onMounted(() => {
-    fireflyPositions.value = generateFireflyPositions();
+    fireflyPositions.value = generateFireflyPositions(props.alert.id);
 });
+
+const isUserInfoAlert = computed(() => props.alert?.data?.type === 'user_info');
+
+function isUserInfoAlertData(data: Alert['data']): data is import('@shared/types/alerts').UserInfoAlert {
+    return data.type === 'user_info';
+}
 
 const usernameColor = computed(() => {
-    if (props.alert.data.type === 'user_info') {
-        return getUsernameColor(props.alert.data.username);
+    if (!isUserInfoAlert.value || !isUserInfoAlertData(props.alert.data)) {
+        return '#ffffff';
     }
-    return '#ffffff';
+    return getUsernameColor(props.alert.data.username);
 });
 
-const usernameBgColor = computed(() => {
-    if (props.alert.data.type === 'user_info') {
-        const color = getUsernameColor(props.alert.data.username);
-        return color.replace(')', ', 0.2)').replace('hsl', 'hsla');
+function convertHslToHsla(hslColor: string, alpha: number): string {
+    if (!hslColor.startsWith('hsl')) {
+        return `hsla(0, 0%, 100%, ${alpha})`;
     }
-    return 'hsla(0, 0%, 100%, 0.2)';
+    return hslColor.replace(')', `, ${alpha})`).replace('hsl', 'hsla');
+}
+
+const usernameBgColor = computed(() => {
+    if (!isUserInfoAlert.value) {
+        return 'hsla(0, 0%, 100%, 0.2)';
+    }
+    const color = usernameColor.value;
+    return convertHslToHsla(color, 0.2);
 });
 
 const formattedFirstSeen = computed(() => {
-    if (props.alert.data.type === 'user_info') {
-        try {
-            const date = new Date(props.alert.data.firstSeen);
-            return date.toLocaleDateString('ru-RU', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        } catch {
-            return props.alert.data.firstSeen;
-        }
+    if (!isUserInfoAlert.value || !isUserInfoAlertData(props.alert.data)) {
+        return '';
     }
-    return '';
+
+    const firstSeen = props.alert.data.firstSeen;
+    if (!firstSeen) {
+        return '';
+    }
+
+    try {
+        const date = new Date(firstSeen);
+        if (isNaN(date.getTime())) {
+            console.warn('[AlertCard] Invalid date:', firstSeen);
+            return firstSeen;
+        }
+        return date.toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    } catch (error) {
+        console.error('[AlertCard] Error formatting date:', error);
+        return firstSeen;
+    }
 });
 </script>
 

@@ -1,32 +1,92 @@
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import type { Alert, AlertData } from '@shared/types/alerts';
 import { ALERTS_CONSTANTS } from '@shared/constants/alerts';
 
 export function useAlerts() {
-    const alerts = ref<Alert[]>([]);
-    const activeTimers = new Map<number, ReturnType<typeof setTimeout>>();
+    const alertsQueue = ref<Alert[]>([]);
+    const currentAlert = ref<Alert | null>(null);
+    const progress = ref<number>(0);
+    let activeTimer: ReturnType<typeof setTimeout> | null = null;
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+    let alertStartTime = 0;
     let alertIdCounter = 0;
 
-    const removeAlert = (alertId: number): void => {
-        const index = alerts.value.findIndex(a => a.id === alertId);
-        if (index !== -1) {
-            alerts.value.splice(index, 1);
+    const alerts = computed(() => {
+        return currentAlert.value ? [currentAlert.value] : [];
+    });
+
+    const updateProgress = (): void => {
+        if (!currentAlert.value) {
+            progress.value = 0;
+            return;
         }
-        activeTimers.delete(alertId);
+
+        const elapsed = Date.now() - alertStartTime;
+        const remaining = Math.max(0, currentAlert.value.duration - elapsed);
+        progress.value = Math.min(100, (elapsed / currentAlert.value.duration) * 100);
+
+        if (remaining <= 0) {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
     };
 
-    const limitAlerts = (): void => {
-        if (alerts.value.length > ALERTS_CONSTANTS.MAX_ALERTS) {
-            const excessCount = alerts.value.length - ALERTS_CONSTANTS.MAX_ALERTS;
-            for (let i = alerts.value.length - excessCount; i < alerts.value.length; i++) {
-                const alertToRemove = alerts.value[i];
-                const timerId = activeTimers.get(alertToRemove.id);
-                if (timerId) {
-                    clearTimeout(timerId);
-                    activeTimers.delete(alertToRemove.id);
-                }
-            }
-            alerts.value.splice(alerts.value.length - excessCount, excessCount);
+    const showNextAlert = (): void => {
+        if (activeTimer) {
+            clearTimeout(activeTimer);
+            activeTimer = null;
+        }
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+
+        if (alertsQueue.value.length === 0) {
+            currentAlert.value = null;
+            progress.value = 0;
+            return;
+        }
+
+        const nextAlert = alertsQueue.value.shift();
+        if (nextAlert) {
+            currentAlert.value = nextAlert;
+            alertStartTime = Date.now();
+            progress.value = 0;
+
+            progressInterval = setInterval(() => {
+                updateProgress();
+            }, 16);
+
+            activeTimer = setTimeout(() => {
+                removeCurrentAlert();
+            }, nextAlert.duration);
+        }
+    };
+
+    const removeCurrentAlert = (): void => {
+        if (activeTimer) {
+            clearTimeout(activeTimer);
+            activeTimer = null;
+        }
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+        currentAlert.value = null;
+        progress.value = 0;
+
+        const LEAVE_ANIMATION_DURATION = 300;
+        setTimeout(() => {
+            showNextAlert();
+        }, LEAVE_ANIMATION_DURATION);
+    };
+
+    const limitQueue = (): void => {
+        if (alertsQueue.value.length > ALERTS_CONSTANTS.MAX_ALERTS) {
+            const excessCount = alertsQueue.value.length - ALERTS_CONSTANTS.MAX_ALERTS;
+            alertsQueue.value.splice(alertsQueue.value.length - excessCount, excessCount);
         }
     };
 
@@ -39,28 +99,34 @@ export function useAlerts() {
                 duration
             };
 
-            alerts.value.unshift(alert);
-            limitAlerts();
+            alertsQueue.value.push(alert);
+            limitQueue();
 
-            const timerId = setTimeout(() => {
-                removeAlert(alert.id);
-            }, duration);
-
-            activeTimers.set(alert.id, timerId);
+            if (!currentAlert.value) {
+                showNextAlert();
+            }
         } catch (error) {
             console.error('[Alerts] Ошибка при добавлении алерта:', error, data);
         }
     };
 
     const cleanup = (): void => {
-        activeTimers.forEach((timerId) => {
-            clearTimeout(timerId);
-        });
-        activeTimers.clear();
+        if (activeTimer) {
+            clearTimeout(activeTimer);
+            activeTimer = null;
+        }
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+        alertsQueue.value = [];
+        currentAlert.value = null;
+        progress.value = 0;
     };
 
     return {
         alerts,
+        progress,
         addAlert,
         cleanup
     };
