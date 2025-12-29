@@ -53,20 +53,57 @@ export async function initTwitchEventSub() {
         // Убираем obtainmentTimestamp - пусть RefreshingAuthProvider сам определит,
         // нужно ли обновлять токен. Если токен истек, он автоматически обновится.
         try {
-            await authProvider.addUserForToken(
-                {
-                    accessToken,
-                    refreshToken,
-                    expiresIn: 14400,
+        await authProvider.addUserForToken(
+            {
+                accessToken,
+                refreshToken,
+                expiresIn: 14400,
                     // obtainmentTimestamp не указываем - пусть система сама определит
-                    scope: ['channel:read:redemptions', 'channel:manage:redemptions']
-                },
-                user.id
-            );
+                scope: ['channel:read:redemptions', 'channel:manage:redemptions']
+            },
+            user.id
+        );
         } catch (tokenError) {
             logger.error('[REWARDS] Ошибка при добавлении токена', tokenError.message);
-            logger.warning('[REWARDS] Возможно, токены истекли', 'проверьте ACCESS_TOKEN и REFRESH_TOKEN в .env');
-            throw tokenError;
+            logger.warning('[REWARDS] Возможно, токены истекли', 'попытка автоматического обновления...');
+
+            // Пытаемся обновить токен
+            const refreshToken = process.env.REFRESH_TOKEN;
+            if (refreshToken) {
+                const refreshed = await refreshAndSaveToken(refreshToken);
+                if (refreshed) {
+                    logger.success('[REWARDS] Токен обновлен', 'повторная попытка инициализации...');
+                    // Повторно пытаемся добавить токен с обновленными значениями
+                    const newAccessToken = process.env.ACCESS_TOKEN;
+                    const newRefreshToken = process.env.REFRESH_TOKEN;
+
+                    if (newAccessToken && newRefreshToken) {
+                        try {
+                            await authProvider.addUserForToken(
+                                {
+                                    accessToken: newAccessToken,
+                                    refreshToken: newRefreshToken,
+                                    expiresIn: 14400,
+                                    scope: ['channel:read:redemptions', 'channel:manage:redemptions']
+                                },
+                                user.id
+                            );
+                            logger.success('[REWARDS] Токен успешно добавлен после обновления');
+                        } catch (retryError) {
+                            logger.error('[REWARDS] Ошибка при повторном добавлении токена', retryError.message);
+                            throw retryError;
+                        }
+                    } else {
+                        throw new Error('Не удалось получить обновленные токены');
+                    }
+                } else {
+                    logger.error('[REWARDS] Не удалось обновить токен', 'проверьте REFRESH_TOKEN в .env');
+                    throw tokenError;
+                }
+            } else {
+                logger.error('[REWARDS] REFRESH_TOKEN не найден', 'не могу обновить токен автоматически');
+                throw tokenError;
+            }
         }
 
         listener = new EventSubWsListener({ apiClient });

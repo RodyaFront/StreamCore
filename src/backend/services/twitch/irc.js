@@ -3,12 +3,16 @@ import { EventEmitter } from 'events';
 import { logMessage } from '../chat/logger.js';
 import { logger } from '../../core/logger.js';
 import { eventBus } from '../../core/index.js';
+import { refreshAndSaveToken } from './token-refresh.js';
 
 let twitchClient = null;
 let reconnectTimeout = null;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
 const RECONNECT_DELAY = 2000;
+
+// Флаг для предотвращения повторных попыток обновления токена при ошибке аутентификации
+let tokenRefreshInProgress = false;
 
 class TwitchIRCClient extends EventEmitter {
     constructor(username, oauthToken, channel, io) {
@@ -171,10 +175,59 @@ class TwitchIRCClient extends EventEmitter {
 
         if (line.includes('Login authentication failed') || line.includes('Invalid NICK')) {
             logger.error('Ошибка аутентификации Twitch IRC', line);
-            const error = new Error('Authentication failed');
             this.connected = false;
             this.socket.destroy();
-            this.emit('error', error);
+
+            // Защита от повторных попыток обновления
+            if (tokenRefreshInProgress) {
+                logger.warning('[TOKEN] Обновление токена уже выполняется, пропускаем повторную попытку');
+                const error = new Error('Authentication failed');
+                this.emit('error', error);
+                return;
+            }
+
+            // Пытаемся обновить токен и переподключиться
+            // Используем force=true при ошибке аутентификации, чтобы обойти rate limiting
+            const refreshToken = process.env.REFRESH_TOKEN;
+            if (refreshToken) {
+                tokenRefreshInProgress = true;
+                logger.info('[TOKEN] Попытка автоматического обновления токена...');
+
+                refreshAndSaveToken(refreshToken, true).then((refreshed) => {
+                    tokenRefreshInProgress = false;
+
+                    if (refreshed) {
+                        logger.success('[TOKEN] Токен обновлен, переподключение...');
+                        // Обновляем токен в клиенте
+                        const newToken = process.env.ACCESS_TOKEN;
+                        if (newToken) {
+                            this.oauthToken = newToken.startsWith('oauth:') ? newToken : `oauth:${newToken}`;
+                            // Переподключаемся с новым токеном через небольшую задержку
+                            setTimeout(() => {
+                                this.connect().catch((err) => {
+                                    logger.error('[TOKEN] Ошибка при переподключении с новым токеном', err.message);
+                                    const error = new Error('Authentication failed');
+                                    this.emit('error', error);
+                                });
+                            }, 1000);
+                            return;
+                        }
+                    }
+                    // Если обновление не удалось, отправляем ошибку
+                    logger.error('[TOKEN] Не удалось обновить токен');
+                    const error = new Error('Authentication failed');
+                    this.emit('error', error);
+                }).catch((err) => {
+                    tokenRefreshInProgress = false;
+                    logger.error('[TOKEN] Ошибка при обновлении токена', err.message);
+                    const error = new Error('Authentication failed');
+                    this.emit('error', error);
+                });
+            } else {
+                logger.error('[TOKEN] REFRESH_TOKEN не найден', 'не могу обновить токен автоматически');
+                const error = new Error('Authentication failed');
+                this.emit('error', error);
+            }
             return;
         }
 
@@ -235,15 +288,49 @@ async function validateToken(token) {
 
         if (response.ok) {
             const data = await response.json();
-            return data;
+            return { valid: true, data };
+        } else if (response.status === 401) {
+            // Токен истек - пытаемся обновить
+            logger.warning('Токен истек (401)', 'попытка автоматического обновления...');
+            const refreshToken = process.env.REFRESH_TOKEN;
+
+            if (refreshToken) {
+                // При ошибке 401 используем force=true для обновления токена
+                const refreshed = await refreshAndSaveToken(refreshToken, true);
+                if (refreshed) {
+                    // Обновляем токен в process.env
+                    const newToken = process.env.ACCESS_TOKEN;
+                    if (newToken) {
+                        logger.success('Токен обновлен', 'повторная валидация...');
+                        // Повторно валидируем новый токен
+                        const newCleanToken = newToken.replace(/^oauth:/i, '');
+                        const retryResponse = await fetch('https://id.twitch.tv/oauth2/validate', {
+                            headers: {
+                                'Authorization': `OAuth ${newCleanToken}`
+                            }
+                        });
+
+                        if (retryResponse.ok) {
+                            const retryData = await retryResponse.json();
+                            return { valid: true, data: retryData, refreshed: true };
+                        }
+                    }
+                } else {
+                    logger.error('Не удалось обновить токен', 'проверьте REFRESH_TOKEN в .env');
+                }
+            } else {
+                logger.error('REFRESH_TOKEN не найден', 'не могу обновить токен автоматически');
+            }
+
+            return { valid: false, error: 'Token expired and refresh failed' };
         } else {
             const errorText = await response.text().catch(() => 'Unknown error');
             logger.warning('Ошибка валидации токена', `HTTP ${response.status}: ${errorText}`);
-            return null;
+            return { valid: false, error: errorText };
         }
     } catch (error) {
         logger.warning('Ошибка при валидации токена', error.message);
-        return null;
+        return { valid: false, error: error.message };
     }
 }
 
@@ -258,17 +345,27 @@ export async function initTwitch(io) {
     }
 
     const tokenWithoutPrefix = oauthToken.replace('oauth:', '');
-    const tokenData = await validateToken(tokenWithoutPrefix);
+    const validationResult = await validateToken(tokenWithoutPrefix);
 
-    if (!tokenData) {
+    // Если токен был обновлен, используем новый токен
+    if (validationResult?.refreshed) {
+        oauthToken = process.env.ACCESS_TOKEN;
+        logger.info('Используется обновленный токен для подключения');
+    }
+
+    if (!validationResult || !validationResult.valid) {
         logger.warning('Не удалось валидировать токен через API', 'попробую подключиться напрямую');
     } else {
+        const tokenData = validationResult.data;
         const requiredScopes = ['chat:read', 'chat:edit'];
         const hasRequiredScopes = requiredScopes.every(scope => tokenData.scopes?.includes(scope));
         if (!hasRequiredScopes) {
             logger.warning('Токен не имеет всех необходимых прав', `Требуются: ${requiredScopes.join(', ')}, попробую подключиться`);
         }
     }
+
+    // Обновляем токен из process.env на случай, если он был обновлен
+    oauthToken = process.env.ACCESS_TOKEN || oauthToken;
 
     if (!oauthToken.startsWith('oauth:')) {
         oauthToken = `oauth:${oauthToken}`;

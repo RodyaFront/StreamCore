@@ -204,7 +204,7 @@ const usernameColor = computed(() => {
     if (!isUserInfoAlert.value || !isUserInfoAlertData(props.alert.data)) {
         return '#ffffff';
     }
-    return getUsernameColor(props.alert.data.username);
+        return getUsernameColor(props.alert.data.username);
 });
 
 function convertHslToHsla(hslColor: string, alpha: number): string {
@@ -232,21 +232,21 @@ const formattedFirstSeen = computed(() => {
         return '';
     }
 
-    try {
+        try {
         const date = new Date(firstSeen);
         if (isNaN(date.getTime())) {
             console.warn('[AlertCard] Invalid date:', firstSeen);
             return firstSeen;
         }
-        return date.toLocaleDateString('ru-RU', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+            return date.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
     } catch (error) {
         console.error('[AlertCard] Error formatting date:', error);
         return firstSeen;
-    }
+        }
 });
 </script>
 

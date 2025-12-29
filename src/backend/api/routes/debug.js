@@ -23,9 +23,9 @@ export function setupDebugRoutes(req, res, pathname, searchParams) {
                     case 'level:up':
                         // Добавляем достаточно опыта для повышения уровня
                         addExp(username, 1000, source).then((levelData) => {
-                            if (levelData && levelData.level > 1) {
-                                // Событие уже отправлено через addExp
-                            }
+                        if (levelData && levelData.level > 1) {
+                            // Событие уже отправлено через addExp
+                        }
                         }).catch((error) => {
                             console.error('[DEBUG] Ошибка при добавлении опыта для повышения уровня:', error);
                         });

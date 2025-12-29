@@ -181,9 +181,9 @@ export async function addExp(username, amount, source = 'unknown', pointsSpent =
             // Это гарантирует, что при быстрых последовательных вызовах
             // каждый вызов будет видеть актуальные данные
             const transaction = db.transaction(() => {
-                // Инициализируем уровень, если его нет
-                let levelData = getUserLevelData(normalizedUsername);
-                if (!levelData) {
+        // Инициализируем уровень, если его нет
+        let levelData = getUserLevelData(normalizedUsername);
+        if (!levelData) {
                     // Внутри транзакции инициализируем уровень
                     const exists = userLevelExists.get(normalizedUsername);
                     if (!exists || exists.count === 0) {
@@ -195,13 +195,13 @@ export async function addExp(username, amount, source = 'unknown', pointsSpent =
                     }
                     // Перечитываем после инициализации
                     levelData = getUserLevelData(normalizedUsername);
-                    if (!levelData) {
-                        return null;
-                    }
-                }
+            if (!levelData) {
+                return null;
+            }
+        }
 
-                const oldLevel = levelData.level;
-                const oldTotalExp = levelData.total_exp;
+        const oldLevel = levelData.level;
+        const oldTotalExp = levelData.total_exp;
 
                 // Проверка на переполнение total_exp
                 if (oldTotalExp > MAX_SAFE_EXP - amount) {
@@ -209,19 +209,19 @@ export async function addExp(username, amount, source = 'unknown', pointsSpent =
                     return null;
                 }
 
-                const newTotalExp = oldTotalExp + amount;
+        const newTotalExp = oldTotalExp + amount;
 
-                // Рассчитываем новый уровень
-                const newLevel = calculateLevel(newTotalExp);
-                const newExp = calculateCurrentExpInLevel(newTotalExp, newLevel);
-                const newExpToNextLevel = calculateExpToNextLevel(newLevel, newExp);
+        // Рассчитываем новый уровень
+        const newLevel = calculateLevel(newTotalExp);
+        const newExp = calculateCurrentExpInLevel(newTotalExp, newLevel);
+        const newExpToNextLevel = calculateExpToNextLevel(newLevel, newExp);
 
-                // Обновляем данные в базе
-                if (newLevel > oldLevel) {
-                    // Уровень повысился - обновляем все поля
+        // Обновляем данные в базе
+        if (newLevel > oldLevel) {
+            // Уровень повысился - обновляем все поля
                     // ВАЖНО: порядок параметров должен соответствовать SQL: level, exp, exp_to_next_level, total_exp, username
-                    updateUserLevel.run(
-                        newLevel,
+            updateUserLevel.run(
+                newLevel,
                         newExp,
                         newExpToNextLevel,
                         newTotalExp,
@@ -243,8 +243,8 @@ export async function addExp(username, amount, source = 'unknown', pointsSpent =
                     newLevel,
                     oldTotalExp,
                     newTotalExp,
-                    newExp,
-                    newExpToNextLevel
+                newExp,
+                newExpToNextLevel
                 };
             });
 
