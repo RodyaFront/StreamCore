@@ -96,6 +96,19 @@ export function isValidUserInfoAlertEvent(data: unknown): data is UserInfoAlertE
         return false;
     }
 
+    // Опциональные поля
+    if (event.totalPointsSpent !== undefined && (typeof event.totalPointsSpent !== 'number' || event.totalPointsSpent < 0)) {
+        return false;
+    }
+
+    if (event.rank !== undefined && event.rank !== null && (typeof event.rank !== 'number' || event.rank < 1 || !Number.isInteger(event.rank))) {
+        return false;
+    }
+
+    if (event.favoriteWords !== undefined && !Array.isArray(event.favoriteWords)) {
+        return false;
+    }
+
     return true;
 }
 

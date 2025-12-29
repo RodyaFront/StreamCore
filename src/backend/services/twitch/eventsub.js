@@ -188,15 +188,39 @@ export async function initTwitchEventSub() {
 
                 if (rewardTitle.toLowerCase().includes('обо мне') || rewardTitle.toLowerCase().includes('about me')) {
                     try {
-                        const userStats = getUserStats.get(username);
-                        const userLevel = getUserLevel.get(username);
+                        const { getUserInfoForAlert } = await import('../../database/queries/alerts.js');
+                        const userInfo = getUserInfoForAlert.get(username);
 
-                        if (userStats) {
+                        if (userInfo) {
+                            // Парсим favorite_words если это JSON строка
+                            let favoriteWords = [];
+                            if (userInfo.favorite_words) {
+                                try {
+                                    const parsed = JSON.parse(userInfo.favorite_words);
+                                    // Если это массив объектов с word и count, извлекаем только слова
+                                    if (Array.isArray(parsed)) {
+                                        favoriteWords = parsed.map(item =>
+                                            typeof item === 'object' && item.word ? item.word : item
+                                        ).filter(w => w);
+                                    } else {
+                                        favoriteWords = [];
+                                    }
+                                } catch (e) {
+                                    // Если не JSON, пробуем как простую строку
+                                    if (typeof userInfo.favorite_words === 'string' && userInfo.favorite_words.trim()) {
+                                        favoriteWords = userInfo.favorite_words.split(',').map(w => w.trim()).filter(w => w);
+                                    }
+                                }
+                            }
+
                             const alertData = {
                                 username: username,
-                                level: userLevel ? userLevel.level : 1,
-                                messageCount: userStats.message_count || 0,
-                                firstSeen: userStats.first_seen || new Date().toISOString()
+                                level: userInfo.level || 1,
+                                messageCount: userInfo.message_count || 0,
+                                firstSeen: userInfo.first_seen || new Date().toISOString(),
+                                totalPointsSpent: userInfo.total_points_spent || 0,
+                                rank: userInfo.rank_by_level || null,
+                                favoriteWords: Array.isArray(favoriteWords) ? favoriteWords : []
                             };
 
                             eventBus.emit('alert:user_info', alertData);

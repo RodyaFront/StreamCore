@@ -41,7 +41,10 @@ useSocketConnection({
             username: data.username,
             level: data.level,
             messageCount: data.messageCount,
-            firstSeen: data.firstSeen
+            firstSeen: data.firstSeen,
+            totalPointsSpent: data.totalPointsSpent,
+            rank: data.rank,
+            favoriteWords: data.favoriteWords
         });
     }
 });

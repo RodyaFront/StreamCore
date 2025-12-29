@@ -25,26 +25,72 @@
                 >
                 <div class="absolute inset-0 bg-[#01241E] opacity-50 z-1"></div>
                 <div class="flex flex-col justify-end z-10 self-stretch">
-                    <img :src="teoLearningImage" alt="" aria-hidden="true" class="h-full max-w-42 object-contain object-bottom pt-4 pl-4">
+                    <img :src="teoLearningImage" alt="" aria-hidden="true" class="h-full max-w-58 object-contain object-bottom pt-4 pl-4">
                 </div>
                 <div class="relative z-10 text-white py-6 pr-8 pl-8">
-                    <span
-                        class="font-bold px-3 py-1 rounded-full inline-block text-shadow-md"
-                        :style="{ color: usernameColor, backgroundColor: usernameBgColor, border: '1px solid ' + usernameColor }"
-                    >
-                        {{ alert.data.username }}
-                    </span>
-                    <div class="text-xl font-medium">
-                        Привет! Вот что я знаю о тебе
+                    <div class="font-medium">
+                        Привет!
+                        <span
+                            class="font-bold inline-block text-shadow-md"
+                            :style="{ color: usernameColor }"
+                        >
+                            {{ alert.data.username }}
+                        </span>
+                        Вот что я знаю о тебе
                     </div>
-                    <div class="mt-4">
-                        Твой уровень — <span class="font-bold text-custom">{{ alert.data.level }}</span>
+                    <div class="mt-4 flex flex-col gap-3">
+                        <div class="flex gap-4 items-center flex-wrap">
+                            <div class="flex items-center gap-3 flex-1">
+                                <div class="w-10 h-10 rounded-lg bg-linear-to-br from-yellow-500/50 to-amber-600/50 flex items-center justify-center border border-yellow-400/30 shadow-lg shadow-yellow-500/20">
+                                    <Trophy :size="18" class="text-yellow-200" />
+                                </div>
+                                <div class="flex flex-col justify-center shrink-0 flex-1">
+                                    <div class="flex-1">
+                                        <span class="font-bold text-custom">{{ alert.data.level }}</span> уровень
+                                    </div>
+                                    <div v-if="alert.data.rank" class="text-sm opacity-70">
+                                        (#{{ alert.data.rank }} в топе)
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 flex-1">
+                                <div class="w-10 h-10 rounded-lg bg-linear-to-br from-blue-500/50 to-cyan-600/50 flex items-center justify-center border border-blue-400/30 shadow-lg shadow-blue-500/20">
+                                    <MessageSquare :size="18" class="text-blue-200" />
+                                </div>
+                                <div>
+                                    <span class="font-bold text-custom">{{ alert.data.messageCount }}</span> сообщений
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div v-if="alert.data.totalPointsSpent && alert.data.totalPointsSpent > 0" class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-linear-to-br from-purple-500/50 to-pink-600/50 flex items-center justify-center border border-purple-400/30 shadow-lg shadow-purple-500/20">
+                                    <Award :size="18" class="text-purple-200" />
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="font-bold text-custom">{{ alert.data.totalPointsSpent }}</span> баллов потрачено
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="alert.data.favoriteWords && alert.data.favoriteWords.length > 0" class="flex items-center gap-2">
+                            <div class="w-10 h-10 rounded-lg bg-linear-to-br from-red-500/50 to-pink-600/50 flex items-center justify-center border border-red-400/30 shadow-lg shadow-red-500/20">
+                                <Heart :size="18" class="text-red-200" />
+                            </div>
+                            <div class="flex flex-col">
+                                <div class="text-sm opacity-70">Любимые слова</div>
+                                <div class="flex gap-x-2 flex-wrap">
+                                    <span
+                                        v-for="(word, index) in alert.data.favoriteWords.slice(0, 5)"
+                                        :key="word"
+                                    >
+                                        {{ word }}<span v-if="index < alert.data.favoriteWords.slice(0, 5).length - 1">,</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        Ты отправил в чат <span class="font-bold text-custom">{{ alert.data.messageCount }}</span> сообщений
-                    </div>
-                    <div>
-                        Первое сообщение ты отправил <span class="font-bold text-custom">{{ formattedFirstSeen }}</span>
+                    <div class="mt-2">
+                        Первое сообщение отправлено <span class="font-bold text-custom">{{ formattedFirstSeen }}</span>
                     </div>
                 </div>
             </div>
@@ -56,6 +102,7 @@
 import { computed, shallowRef, onMounted } from 'vue';
 import type { Alert } from '@shared/types/alerts';
 import { useUsernameColor } from '@shared/composables/useUsernameColor';
+import { Trophy, MessageSquare, Award, Heart } from '@shared/utils/icons';
 import teoLearningImage from '@shared/assets/images/teo_learning.png';
 import panelBgGrass from '@shared/assets/images/panel_bg_grass.png';
 import CircularProgress from './CircularProgress.vue';
@@ -205,21 +252,6 @@ const usernameColor = computed(() => {
         return '#ffffff';
     }
         return getUsernameColor(props.alert.data.username);
-});
-
-function convertHslToHsla(hslColor: string, alpha: number): string {
-    if (!hslColor.startsWith('hsl')) {
-        return `hsla(0, 0%, 100%, ${alpha})`;
-    }
-    return hslColor.replace(')', `, ${alpha})`).replace('hsl', 'hsla');
-}
-
-const usernameBgColor = computed(() => {
-    if (!isUserInfoAlert.value) {
-        return 'hsla(0, 0%, 100%, 0.2)';
-    }
-    const color = usernameColor.value;
-    return convertHslToHsla(color, 0.2);
 });
 
 const formattedFirstSeen = computed(() => {

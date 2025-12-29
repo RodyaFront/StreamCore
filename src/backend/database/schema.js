@@ -7,7 +7,9 @@ import { mkdirSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const dbDir = path.join(__dirname, '../../../..', 'data');
+// Путь к корню проекта: от src/backend/database/ вверх на 3 уровня
+const projectRoot = path.join(__dirname, '../../..');
+const dbDir = path.join(projectRoot, 'data');
 const dbPath = path.join(dbDir, 'chat_database.db');
 
 try {

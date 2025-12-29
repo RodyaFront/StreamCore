@@ -6,6 +6,7 @@ import './services/database/index.js';
 import './services/udp/index.js';
 import './services/twitch/index.js';
 import { initializeLevelsEventHandlers } from './services/chat/levels.js';
+import { startPeriodicFavoriteWordsUpdate } from './services/chat/stats.js';
 
 async function start() {
     try {
@@ -27,6 +28,7 @@ async function start() {
         logger.timedSuccess('Database', 'database', 'data/chat_database.db');
 
         initializeLevelsEventHandlers();
+        startPeriodicFavoriteWordsUpdate();
 
         logger.startTiming('udp');
         await serviceManager.initialize('udp');

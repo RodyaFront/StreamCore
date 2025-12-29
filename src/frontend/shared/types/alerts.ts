@@ -6,6 +6,9 @@ export interface UserInfoAlert {
     level: number;
     messageCount: number;
     firstSeen: string;
+    totalPointsSpent?: number;
+    rank?: number | null;
+    favoriteWords?: string[];
 }
 
 export interface ModsListAlert {
@@ -33,5 +36,8 @@ export interface UserInfoAlertEvent {
     level: number;
     messageCount: number;
     firstSeen: string;
+    totalPointsSpent?: number;
+    rank?: number | null;
+    favoriteWords?: string[];
 }
 
