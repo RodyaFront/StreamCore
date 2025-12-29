@@ -3,7 +3,7 @@ import type { Alert } from '@shared/types/alerts';
 import type { ShoutoutAlertEvent } from '@shared/types/alerts';
 import { ALERTS_CONSTANTS } from '@shared/constants/alerts';
 
-const DEFAULT_DURATION = 8000;
+const DEFAULT_DURATION = 18000;
 
 export function useShoutoutAlerts() {
     const alertsQueue = ref<Alert[]>([]);

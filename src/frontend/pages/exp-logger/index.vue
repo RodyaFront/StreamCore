@@ -1,11 +1,20 @@
 <template>
     <div class="h-screen relative">
+        <transition name="gradient-slide">
+            <div
+                v-if="logs.length > 0"
+                class="absolute"
+                style="left: 0; bottom: 0;"
+            >
+                <VectorLeftBottomRadialGradientBg class="w-full h-full opacity-80"/>
+            </div>
+        </transition>
         <div
             ref="logsContainer"
-            class="h-screen p-4 flex flex-col justify-end overflow-y-hidden overflow-x-hidden"
+            class="h-screen p-4 flex flex-col justify-end overflow-y-hidden overflow-x-hidden relative z-10"
             :style="{
                 maskImage: `linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.1) 15%, rgba(0, 0, 0, 0.4) 25%, rgba(0, 0, 0, 0.8) 35%, black ${EXP_LOGGER_CONSTANTS.MASK_OPAQUE_END}, black 100%)`,
-                WebkitMaskImage: `linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.1) 15%, rgba(0, 0, 0, 0.4) 25%, rgba(0, 0, 0, 0.8) 35%, black ${EXP_LOGGER_CONSTANTS.MASK_OPAQUE_END}, black 100%)`
+                WebkitMaskImage: `linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.1) 15%, rgba(0, 0, 0, 0.4) 25%, rgba(0, 0, 0, 0.8) 35%, black ${EXP_LOGGER_CONSTANTS.MASK_OPAQUE_END}, black 100%)`,
             }"
         >
             <transition-group name="exp-log" tag="div" class="flex flex-col gap-6">
@@ -57,6 +66,7 @@ import { ref, onBeforeUnmount } from 'vue';
 import likeImage from '@shared/assets/images/like.png';
 import greenBgPlank from '@shared/assets/images/green_bg_for_plank.png';
 import StarIcon from '@shared/components/StarIcon.vue';
+import VectorLeftBottomRadialGradientBg from '@shared/components/vector/VectorLeftBottomRadialGradientBg.vue';
 import { UI_TEXT, EXP_LOGGER_CONSTANTS } from '@shared/constants/expLogger';
 import { useExpLogger } from '@shared/composables/useExpLogger';
 import { useSocketConnection } from '@shared/composables/useSocketConnection';
@@ -118,5 +128,29 @@ onBeforeUnmount(() => {
 
 .exp-log-move {
     transition: transform 0.4s ease;
+}
+
+.gradient-slide-enter-active {
+    transition: opacity 0.3s ease-out;
+}
+
+.gradient-slide-enter-from {
+    opacity: 0;
+}
+
+.gradient-slide-enter-to {
+    opacity: 1;
+}
+
+.gradient-slide-leave-active {
+    transition: opacity 0.3s ease-in;
+}
+
+.gradient-slide-leave-from {
+    opacity: 1;
+}
+
+.gradient-slide-leave-to {
+    opacity: 0;
 }
 </style>
