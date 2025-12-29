@@ -36,6 +36,12 @@ export const SocketIOService = {
                 this.io.emit('alert:user_info', data);
             }
         });
+
+        eventBus.on('alert:shoutout', (data) => {
+            if (this.io) {
+                this.io.emit('alert:shoutout', data);
+            }
+        });
     },
 
     getIO() {

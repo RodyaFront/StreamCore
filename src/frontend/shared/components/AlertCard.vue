@@ -280,6 +280,7 @@ const formattedFirstSeen = computed(() => {
         return firstSeen;
         }
 });
+
 </script>
 
 <style>

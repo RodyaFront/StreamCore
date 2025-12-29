@@ -1,4 +1,4 @@
-export type AlertType = 'user_info' | 'mods_list' | 'custom';
+export type AlertType = 'user_info' | 'mods_list' | 'custom' | 'shoutout';
 
 export interface UserInfoAlert {
     type: 'user_info';
@@ -22,7 +22,13 @@ export interface CustomAlert {
     content: string;
 }
 
-export type AlertData = UserInfoAlert | ModsListAlert | CustomAlert;
+export interface ShoutoutAlert {
+    type: 'shoutout';
+    username: string;
+    message: string;
+}
+
+export type AlertData = UserInfoAlert | ModsListAlert | CustomAlert | ShoutoutAlert;
 
 export interface Alert {
     id: number;
@@ -39,5 +45,10 @@ export interface UserInfoAlertEvent {
     totalPointsSpent?: number;
     rank?: number | null;
     favoriteWords?: string[];
+}
+
+export interface ShoutoutAlertEvent {
+    username: string;
+    message: string;
 }
 

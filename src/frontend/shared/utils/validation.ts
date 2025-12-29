@@ -1,5 +1,5 @@
 import type { ExpAddedEvent, LevelUpEvent, ExpSource } from '@shared/types';
-import type { UserInfoAlertEvent } from '@shared/types/alerts';
+import type { UserInfoAlertEvent, ShoutoutAlertEvent } from '@shared/types/alerts';
 
 const VALID_EXP_SOURCES: ExpSource[] = ['message', 'word_of_day', 'achievement', 'quest', 'streak', 'reward', 'unknown'];
 
@@ -106,6 +106,24 @@ export function isValidUserInfoAlertEvent(data: unknown): data is UserInfoAlertE
     }
 
     if (event.favoriteWords !== undefined && !Array.isArray(event.favoriteWords)) {
+        return false;
+    }
+
+    return true;
+}
+
+export function isValidShoutoutAlertEvent(data: unknown): data is ShoutoutAlertEvent {
+    if (!data || typeof data !== 'object') {
+        return false;
+    }
+
+    const event = data as Record<string, unknown>;
+
+    if (typeof event.username !== 'string' || event.username.trim() === '') {
+        return false;
+    }
+
+    if (typeof event.message !== 'string' || event.message.trim() === '') {
         return false;
     }
 

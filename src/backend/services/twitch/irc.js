@@ -260,6 +260,22 @@ class TwitchIRCClient extends EventEmitter {
         }, RECONNECT_DELAY);
     }
 
+    sendMessage(message) {
+        if (!this.connected || !this.socket || this.socket.destroyed) {
+            logger.warning('[IRC] Не удалось отправить сообщение', 'IRC клиент не подключен');
+            return false;
+        }
+
+        try {
+            const command = `PRIVMSG ${this.channel} :${message}\r\n`;
+            this.socket.write(command);
+            return true;
+        } catch (error) {
+            logger.error('[IRC] Ошибка при отправке сообщения', error.message);
+            return false;
+        }
+    }
+
     disconnect() {
         if (reconnectTimeout) {
             clearTimeout(reconnectTimeout);
@@ -400,5 +416,13 @@ export function disconnectTwitch() {
         twitchClient.disconnect();
         twitchClient = null;
     }
+}
+
+export function sendChatMessage(message) {
+    if (twitchClient && twitchClient.connected) {
+        return twitchClient.sendMessage(message);
+    }
+    logger.warning('[IRC] Не удалось отправить сообщение в чат', 'IRC клиент не подключен');
+    return false;
 }
 

@@ -2,14 +2,15 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_CONFIG } from '@shared/config/socket.js';
 import { SOCKET_RETRY_CONFIG } from '@shared/constants/expLogger';
-import { isValidExpAddedEvent, isValidLevelUpEvent, isValidUserInfoAlertEvent } from '@shared/utils/validation';
+import { isValidExpAddedEvent, isValidLevelUpEvent, isValidUserInfoAlertEvent, isValidShoutoutAlertEvent } from '@shared/utils/validation';
 import type { ExpAddedEvent, LevelUpEvent } from '@shared/types';
-import type { UserInfoAlertEvent } from '@shared/types/alerts';
+import type { UserInfoAlertEvent, ShoutoutAlertEvent } from '@shared/types/alerts';
 
 interface SocketEventHandlers {
     onExpAdded?: (data: ExpAddedEvent) => void;
     onLevelUp?: (data: LevelUpEvent) => void;
     onUserInfoAlert?: (data: UserInfoAlertEvent) => void;
+    onShoutoutAlert?: (data: ShoutoutAlertEvent) => void;
     onConnect?: () => void;
     onDisconnect?: () => void;
     onError?: (error: Error) => void;
@@ -119,6 +120,19 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
                 onUserInfoAlertHandler(data);
             });
         }
+
+        if (handlers.onShoutoutAlert) {
+            const onShoutoutAlertHandler = handlers.onShoutoutAlert;
+            socket.value.on('alert:shoutout', (data: unknown) => {
+                if (!isValidShoutoutAlertEvent(data)) {
+                    const errorMsg = 'Получены некорректные данные события alert:shoutout';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('alert:shoutout', data, errorMsg);
+                    return;
+                }
+                onShoutoutAlertHandler(data as ShoutoutAlertEvent);
+            });
+        }
     };
 
     const disconnect = (): void => {
@@ -133,6 +147,7 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
             socket.value.off('level:exp:added');
             socket.value.off('level:up');
             socket.value.off('alert:user_info');
+            socket.value.off('alert:shoutout');
             socket.value.disconnect();
             socket.value = null;
             isConnected.value = false;
