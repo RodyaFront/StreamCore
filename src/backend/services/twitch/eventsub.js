@@ -418,12 +418,52 @@ async function handleRedemptionEvent(event) {
 function setupEventSubListeners(eventSubListener, userId, channel) {
     eventSubListener.onChannelRedemptionAdd(userId, handleRedemptionEvent);
 
+    try {
+        eventSubListener.onStreamOnline(userId, (event) => {
+            logger.info('[STREAM] Стрим начался', {
+                startedAt: event.startDate.toISOString(),
+                title: event.title
+            });
+            eventBus.emit('stream:online', {
+                startedAt: event.startDate.toISOString(),
+                title: event.title
+            });
+        });
+    } catch (error) {
+        logger.warning('[STREAM] Не удалось подписаться на stream.online', error.message || error);
+        logger.info('[STREAM] Бонус за первое сообщение будет работать через проверку статуса через API');
+    }
+
+    try {
+        eventSubListener.onStreamOffline(userId, () => {
+            logger.info('[STREAM] Стрим закончился');
+            eventBus.emit('stream:offline');
+        });
+    } catch (error) {
+        logger.warning('[STREAM] Не удалось подписаться на stream.offline', error.message || error);
+    }
+
     eventSubListener.onSubscriptionCreateFailure((subscription, error) => {
-        logger.error('[REWARDS] Ошибка создания подписки:', error.message || error);
+        const subscriptionType = subscription?.type || 'unknown';
+
+        if (subscriptionType.includes('stream.online') || subscriptionType.includes('stream.offline')) {
+            logger.warning('[STREAM] Не удалось создать подписку на события стрима', {
+                type: subscriptionType,
+                error: error.message || error
+            });
+            logger.info('[STREAM] Бонус за первое сообщение будет работать через периодическую проверку статуса');
+        } else {
+            logger.error('[REWARDS] Ошибка создания подписки:', error.message || error);
+        }
     });
 
     eventSubListener.onRevoke((subscription) => {
-        logger.warning('[REWARDS] Подписка отозвана');
+        const subscriptionType = subscription?.type || 'unknown';
+        if (subscriptionType.includes('stream.online') || subscriptionType.includes('stream.offline')) {
+            logger.warning('[STREAM] Подписка на события стрима отозвана');
+        } else {
+            logger.warning('[REWARDS] Подписка отозвана');
+        }
     });
 }
 
@@ -459,6 +499,15 @@ export async function initTwitchEventSub() {
         eventBus.emit('twitch:eventsub:connected', { channel });
 
         setupEventSubListeners(listener, user.id, channel);
+
+        const { getStreamSessionService } = await import('../stream/StreamSessionService.js');
+        const streamSession = getStreamSessionService();
+        await streamSession.checkStreamStatus(apiClient, user.id);
+
+        const statusCheckInterval = streamSession.startPeriodicStatusCheck(apiClient, user.id, 60000);
+        if (statusCheckInterval) {
+            logger.info('[STREAM_SESSION] Периодическая проверка статуса стрима активна (каждые 60 секунд)');
+        }
     } catch (error) {
         logger.error('[REWARDS] Ошибка при инициализации EventSub:', error.message || error);
     }

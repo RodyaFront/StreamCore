@@ -1,7 +1,7 @@
 import type { ExpAddedEvent, LevelUpEvent, ExpSource } from '@shared/types';
 import type { UserInfoAlertEvent, ShoutoutAlertEvent } from '@shared/types/alerts';
 
-const VALID_EXP_SOURCES: ExpSource[] = ['message', 'word_of_day', 'achievement', 'quest', 'streak', 'reward', 'unknown'];
+const VALID_EXP_SOURCES: ExpSource[] = ['message', 'word_of_day', 'achievement', 'quest', 'streak', 'reward', 'first_message', 'unknown'];
 
 export function isValidExpAddedEvent(data: unknown): data is ExpAddedEvent {
     if (!data || typeof data !== 'object') {

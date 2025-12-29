@@ -36,6 +36,7 @@
                         <option value="achievement">Achievement</option>
                         <option value="quest">Quest</option>
                         <option value="streak">Streak</option>
+                        <option value="first_message">First Message</option>
                         <option value="unknown">Unknown</option>
                     </select>
                 </div>
@@ -105,6 +106,12 @@
                         Streak (+25)
                     </button>
                     <button
+                        @click="quickAction('first_message')"
+                        class="px-4 py-2 bg-emerald-500/30 hover:bg-emerald-500/50 rounded-lg border border-emerald-400/30 transition-colors"
+                    >
+                        First Message (+10)
+                    </button>
+                    <button
                         @click="triggerLevelUp()"
                         class="px-4 py-2 bg-orange-500/30 hover:bg-orange-500/50 rounded-lg border border-orange-400/30 transition-colors"
                     >
@@ -162,7 +169,8 @@ const quickAction = async (source) => {
         word_of_day: 10,
         achievement: 20,
         quest: 15,
-        streak: 25
+        streak: 25,
+        first_message: 10
     };
 
     testParams.value.source = source;

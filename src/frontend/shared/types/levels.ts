@@ -1,4 +1,4 @@
-export type ExpSource = 'message' | 'word_of_day' | 'achievement' | 'quest' | 'streak' | 'reward' | 'unknown';
+export type ExpSource = 'message' | 'word_of_day' | 'achievement' | 'quest' | 'streak' | 'reward' | 'first_message' | 'unknown';
 
 export interface ExpLog {
     id: number;

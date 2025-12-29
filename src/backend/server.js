@@ -30,6 +30,9 @@ async function start() {
         initializeLevelsEventHandlers();
         startPeriodicFavoriteWordsUpdate();
 
+        const { initializeFirstMessageBonusHandler } = await import('./services/bonuses/FirstMessageBonusHandler.js');
+        initializeFirstMessageBonusHandler();
+
         logger.startTiming('udp');
         await serviceManager.initialize('udp');
         logger.timedSuccess('UDP Server', 'udp', 'порт 3002');
