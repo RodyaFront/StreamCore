@@ -1,6 +1,7 @@
 import { getUserLevelData } from './levels.js';
 import { logger } from '../../core/logger.js';
 import { createRateLimiter } from './RateLimiter.js';
+import { getUserStats } from '../../database/queries/users.js';
 
 class UserInfoService {
     constructor() {
@@ -127,6 +128,28 @@ class UserInfoService {
             return isSub;
         } catch (error) {
             logger.warning(`[USER_INFO] Ошибка при проверке подписки для ${username}:`, error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Проверяет, является ли это первым сообщением пользователя за всё время
+     * @param {string} username - Имя пользователя
+     * @returns {boolean} - true если это первое сообщение пользователя
+     */
+    isFirstMessageEver(username) {
+        if (!username || typeof username !== 'string') {
+            return false;
+        }
+
+        try {
+            const normalizedUsername = username.toLowerCase();
+            const userStats = getUserStats.get(normalizedUsername);
+
+            // Если пользователя нет в БД или message_count === 0, это первое сообщение
+            return !userStats || userStats.message_count === 0;
+        } catch (error) {
+            logger.error(`[USER_INFO] Ошибка при проверке первого сообщения для ${username}:`, error.message);
             return false;
         }
     }

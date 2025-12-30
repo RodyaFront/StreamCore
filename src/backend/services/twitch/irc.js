@@ -1,6 +1,5 @@
 import tls from 'tls';
 import { EventEmitter } from 'events';
-import { logMessage } from '../chat/logger.js';
 import { logger } from '../../core/logger.js';
 import { eventBus } from '../../core/index.js';
 import { refreshAndSaveToken } from './token-refresh.js';
@@ -137,7 +136,8 @@ class TwitchIRCClient extends EventEmitter {
             const msg = message.trim().toLowerCase();
             const isCommand = msg.startsWith('!');
 
-            logMessage(username, username, message, channel, isCommand);
+            // logMessage теперь вызывается в ChatMessageService.processMessage
+            // для правильного порядка проверки isFirstMessageEver
 
             if (msg === '!тест') {
                 if (this.io) {

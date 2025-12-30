@@ -6,7 +6,7 @@
                 class="absolute"
                 style="left: 0; bottom: 0;"
             >
-                <VectorLeftBottomRadialGradientBg class="w-full h-full opacity-80"/>
+                <VectorLeftBottomRadialGradientBg class="text-black/50 w-full h-full opacity-80"/>
             </div>
         </transition>
         <div
@@ -39,9 +39,9 @@
                         <span :style="{ color: getUsernameColor(log.username) }" class="font-bold">{{ log.username }}</span>
                         <div class="flex items-center gap-2">
                             <span>{{ UI_TEXT.RECEIVED }}</span>
-                            <span class="font-bold text-orange-300 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-orange-300/30">
+                            <span class="font-bold text-shadow-[0_0_12px_rgba(228,242,101,0.2)] shadow-[0_0_32px_rgba(228,242,101,0.2)] border border-[#D6E359] text-[#eaf775] inline-flex items-center gap-1 px-3 py-1 rounded-full bg-linear-to-tr from-[#E4F265]/50 to-[#D6E359]/30">
                                 +{{ log.amount }}
-                                <StarIcon :size="12" />
+                                <StarIcon :size="12" class="rotate-animation" />
                             </span>
                             <span>{{ UI_TEXT.EXP }}</span>
                             <span
@@ -152,5 +152,18 @@ onBeforeUnmount(() => {
 
 .gradient-slide-leave-to {
     opacity: 0;
+}
+
+.rotate-animation {
+    animation: rotate 5s linear infinite;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 </style>

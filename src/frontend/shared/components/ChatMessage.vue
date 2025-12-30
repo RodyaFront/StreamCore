@@ -1,6 +1,13 @@
 <template>
-  <div class="chat-message-wrapper">
-    <div class="chat-message inline-flex flex-col items-start gap-1 rounded-xl">
+  <div
+    class="chat-message-wrapper"
+  >
+    <div
+      class="chat-message inline-flex flex-col items-start gap-1 rounded-xl"
+      :class="{ 'p-6 pt-8 rounded-2xl border-2 border-amber-400 relative': isFirstMessage }"
+    >
+      <div v-if="isFirstMessage" class="text-amber-400 text-xs absolute top-2 left-2 text-shadow-xl font-medium">Впервые с нами!</div>
+      <Sparkles v-if="isFirstMessage" :size="16" color="#fbbf24" class="absolute top-2 right-2"/>
       <div
         class="flex items-center gap-1.5 shrink-0 px-2 pr-1 py-1 text-white rounded-full -mb-2 -ml-2 z-2 shadow-lg"
         :style="{
@@ -62,7 +69,7 @@ import panelBgGrass from '@shared/assets/images/panel_bg_grass.png';
 import { getLevelColor } from '@shared/utils/levelColors';
 import { useUsernameColor } from '@shared/composables/useUsernameColor';
 import tinycolor from 'tinycolor2';
-import { Star } from 'lucide-vue-next';
+import { Sparkles, Star } from 'lucide-vue-next';
 import KitkateGoat from '@shared/assets/images/kitkate_goat.png';
 
 const props = defineProps<{
@@ -85,6 +92,10 @@ const levelColor = computed(() => getLevelColor(props.message.level));
 const borderColor = computed(() => {
   const color = getUsernameColor(props.message.username);
   return tinycolor(color).setAlpha(0.3).toRgbString();
+});
+
+const isFirstMessage = computed(() => {
+  return props.message.isFirstMessage === true;
 });
 </script>
 

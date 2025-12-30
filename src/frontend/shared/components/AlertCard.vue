@@ -105,6 +105,7 @@ import { useUsernameColor } from '@shared/composables/useUsernameColor';
 import { Trophy, MessageSquare, Award, Heart } from '@shared/utils/icons';
 import teoLearningImage from '@shared/assets/images/teo_learning.png';
 import panelBgGrass from '@shared/assets/images/panel_bg_grass.png';
+import infoAlertSound from '@shared/assets/info_alert_sound.mp3';
 import CircularProgress from './CircularProgress.vue';
 
 interface Props {
@@ -238,7 +239,17 @@ function generateFireflyPositions(alertId: number): FireflyPosition[] {
 }
 
 onMounted(() => {
-    fireflyPositions.value = generateFireflyPositions(props.alert.id);
+  fireflyPositions.value = generateFireflyPositions(props.alert.id);
+
+  try {
+    const audio = new Audio(infoAlertSound);
+    audio.volume = 0.3;
+    audio.play().catch((error) => {
+      console.warn('[AlertCard] Не удалось воспроизвести звук:', error);
+    });
+  } catch (error) {
+    console.error('[AlertCard] Ошибка при создании аудио:', error);
+  }
 });
 
 const isUserInfoAlert = computed(() => props.alert?.data?.type === 'user_info');

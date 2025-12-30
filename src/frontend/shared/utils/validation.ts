@@ -198,6 +198,10 @@ export function isValidChatMessageEvent(data: unknown): data is ChatMessageEvent
         return false;
     }
 
+    if (event.isFirstMessage !== undefined && typeof event.isFirstMessage !== 'boolean') {
+        return false;
+    }
+
     if (event.badges !== undefined && !Array.isArray(event.badges)) {
         return false;
     }

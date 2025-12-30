@@ -18,14 +18,14 @@ export const SOURCE_TEXT_MAP = {
 } as const;
 
 export const SOURCE_CLASSES_MAP = {
-    'message': 'text-blue-400 bg-blue-400/30',
-    'word_of_day': 'text-purple-400 bg-purple-400/30',
-    'achievement': 'text-yellow-400 bg-yellow-400/30',
-    'quest': 'text-green-400 bg-green-400/30',
-    'streak': 'text-red-400 bg-red-400/30',
-    'reward': 'text-amber-400 bg-amber-400/30',
-    'first_message': 'text-emerald-400 bg-emerald-400/30',
-    'unknown': 'text-gray-400 bg-gray-400/30'
+    'message': 'text-blue-100 bg-blue-800/30',
+    'word_of_day': 'text-purple-100 bg-purple-800/30',
+    'achievement': 'text-yellow-100 bg-yellow-800/30',
+    'quest': 'text-green-100 bg-green-800/30',
+    'streak': 'text-red-100 bg-red-800/30',
+    'reward': 'text-amber-100 bg-amber-800/30',
+    'first_message': 'text-emerald-100 bg-emerald-800/30',
+    'unknown': 'text-gray-100 bg-gray-800/30'
 } as const;
 
 export const UI_TEXT = {

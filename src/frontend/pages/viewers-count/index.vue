@@ -1,5 +1,5 @@
 <template>
-    <div class="h-screen w-screen flex flex-col justify-center items-center gap-8 bg-black">
+    <div class="h-screen w-screen flex flex-col justify-center items-center gap-8">
         <div :class="['viewers-count-container',
                     'gradient-border-wrapper',
                     'text-xl',

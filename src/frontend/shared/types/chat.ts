@@ -9,6 +9,7 @@ export interface ChatMessageEvent {
     isCommand: boolean;
     level?: number;
     isSubscriber?: boolean;
+    isFirstMessage?: boolean;
     badges?: string[];
     color?: string;
 }

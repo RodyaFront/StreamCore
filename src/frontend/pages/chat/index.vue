@@ -62,6 +62,12 @@
                 >
                     Тест обогащения
                 </button>
+                <button
+                    @click="sendTestMessage('firstMessage')"
+                    class="px-3 py-1.5 text-xs bg-cyan-500/30 hover:bg-cyan-500/50 rounded border border-cyan-400/30 transition-colors text-white"
+                >
+                    Первое сообщение
+                </button>
             </div>
             <div class="flex items-center gap-2">
                 <button
@@ -206,6 +212,17 @@ const sendTestMessage = (type: string) => {
             setTimeout(() => {
                 updateMessage(messageId, { isSubscriber: true });
             }, 1000);
+            break;
+
+        case 'firstMessage':
+            addMessage({
+                ...baseMessage,
+                username: 'newuser',
+                displayName: 'NewUser',
+                message: 'Моё! 🎉',
+                level: 1,
+                isFirstMessage: true
+            });
             break;
 
         default:

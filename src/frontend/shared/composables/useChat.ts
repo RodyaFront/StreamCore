@@ -66,6 +66,7 @@ export function useChat(options: UseChatOptions = {}) {
                 isCommand: data.isCommand || false,
                 level: data.level,
                 isSubscriber: data.isSubscriber,
+                isFirstMessage: data.isFirstMessage,
                 badges: data.badges,
                 color: data.color
             };

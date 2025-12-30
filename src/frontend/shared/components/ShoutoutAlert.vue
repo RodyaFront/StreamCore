@@ -42,22 +42,36 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue';
 import shoutoutImage from '@shared/assets/images/shoutout.png';
 import panelBgGrass from '@shared/assets/images/panel_bg_grass.png';
 import loudEffectLeft from '@shared/assets/images/loud_effect_left.png';
 import loudEffectRight from '@shared/assets/images/loud_effect_right.png';
+import shoutoutSound from '@shared/assets/shoutout_sound.mp3';
 import CircularProgress from './CircularProgress.vue';
 
 interface Props {
-    username: string;
-    message: string;
-    progress?: number;
-    remainingSeconds?: number;
+  username: string;
+  message: string;
+  progress?: number;
+  remainingSeconds?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    progress: 0,
-    remainingSeconds: 0
+  progress: 0,
+  remainingSeconds: 0
+});
+
+onMounted(() => {
+  try {
+    const audio = new Audio(shoutoutSound);
+    audio.volume = 0.3;
+    audio.play().catch((error) => {
+      console.warn('[ShoutoutAlert] Не удалось воспроизвести звук:', error);
+    });
+  } catch (error) {
+    console.error('[ShoutoutAlert] Ошибка при создании аудио:', error);
+  }
 });
 </script>
 

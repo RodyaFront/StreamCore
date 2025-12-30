@@ -1,6 +1,7 @@
 import { eventBus, logger } from '../../core/index.js';
 import { getUserInfoService } from './UserInfoService.js';
 import { getEmoteService } from './EmoteService.js';
+import { logMessage } from './logger.js';
 
 class ChatMessageService {
     /**
@@ -92,6 +93,18 @@ class ChatMessageService {
             const userInfoService = getUserInfoService();
             const level = userInfoService.getUserLevel(username);
             normalizedMessage.level = level || 1;
+
+            // Проверяем, является ли это первым сообщением пользователя за всё время
+            // ВАЖНО: проверка ДО логирования, чтобы message_count еще не был обновлен
+            if (!isCommand) {
+                const isFirstMessage = userInfoService.isFirstMessageEver(username);
+                normalizedMessage.isFirstMessage = isFirstMessage;
+            } else {
+                normalizedMessage.isFirstMessage = false;
+            }
+
+            // Логируем сообщение в БД (обновляет message_count)
+            logMessage(username, displayName, message, channel, isCommand);
 
             // Отправляем сообщение сразу (неблокирующе)
             this.emitChatMessage(normalizedMessage);
