@@ -1,5 +1,5 @@
 <template>
-    <div class="h-screen w-screen bg-black flex flex-col">
+    <div class="h-screen w-screen flex flex-col">
         <div
             class="flex-1 overflow-hidden p-4 space-y-1 flex flex-col justify-end"
         >
@@ -12,7 +12,7 @@
             </transition-group>
         </div>
 
-        <div v-if="showDebugControls" class="px-4 py-3 bg-gray-900/80 border-t border-gray-700">
+        <div v-if="false" class="px-4 py-3 bg-gray-900/80 border-t border-gray-700">
             <div class="flex flex-wrap gap-2 mb-2">
                 <button
                     @click="sendTestMessage('basic')"
