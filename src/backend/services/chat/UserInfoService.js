@@ -104,17 +104,22 @@ class UserInfoService {
                 const subscription = await this.apiClient.subscriptions.getSubscriptionForUser(this.broadcasterId, user.id);
                 isSub = subscription !== null;
             } catch (error) {
+                const errorMessage = error.message || '';
                 // Если метод не доступен или нет прав, возвращаем false
-                if (error.message && (error.message.includes('403') || error.message.includes('401'))) {
+                if (errorMessage.includes('403') || errorMessage.includes('401')) {
                     // Нет прав для проверки подписки, возвращаем false
                     isSub = false;
-                } else if (error.message && error.message.includes('429')) {
+                } else if (errorMessage.includes('does not have any of the requested scopes') ||
+                           errorMessage.includes('can not be upgraded')) {
+                    // Токен не имеет нужных scopes - это ожидаемо, не логируем
+                    isSub = false;
+                } else if (errorMessage.includes('429')) {
                     // Rate limit exceeded - логируем и возвращаем false
                     logger.warning(`[USER_INFO] Rate limit при проверке подписки для ${username}`);
                     isSub = false;
                 } else {
                     // Другие ошибки логируем, но не прерываем выполнение
-                    logger.warning(`[USER_INFO] Ошибка при проверке подписки для ${username}:`, error.message);
+                    logger.warning(`[USER_INFO] Ошибка при проверке подписки для ${username}:`, errorMessage);
                     isSub = false;
                 }
             }
@@ -127,7 +132,12 @@ class UserInfoService {
 
             return isSub;
         } catch (error) {
-            logger.warning(`[USER_INFO] Ошибка при проверке подписки для ${username}:`, error.message);
+            const errorMessage = error.message || '';
+            // Не логируем ошибки связанные с отсутствием scopes
+            if (!errorMessage.includes('does not have any of the requested scopes') &&
+                !errorMessage.includes('can not be upgraded')) {
+                logger.warning(`[USER_INFO] Ошибка при проверке подписки для ${username}:`, errorMessage);
+            }
             return false;
         }
     }

@@ -3,7 +3,7 @@ import { serviceManager, pluginManager, eventBus, logger } from './core/index.js
 import './services/http/index.js';
 import './services/socketio/index.js';
 import './services/database/index.js';
-import './services/udp/index.js';
+// import './services/udp/index.js'; // Отключено: хендлинг нажатий клавиш больше не нужен
 import './services/twitch/index.js';
 import { initializeLevelsEventHandlers } from './services/chat/levels.js';
 import { startPeriodicFavoriteWordsUpdate } from './services/chat/stats.js';
@@ -36,9 +36,10 @@ async function start() {
         const { initializeChatEventHandler } = await import('./services/chat/ChatEventHandler.js');
         initializeChatEventHandler();
 
-        logger.startTiming('udp');
-        await serviceManager.initialize('udp');
-        logger.timedSuccess('UDP Server', 'udp', 'порт 3002');
+        // Отключено: хендлинг нажатий клавиш больше не нужен
+        // logger.startTiming('udp');
+        // await serviceManager.initialize('udp');
+        // logger.timedSuccess('UDP Server', 'udp', 'порт 3002');
 
         logger.section('🔌 Загрузка плагинов');
         logger.startTiming('plugins');
@@ -105,7 +106,7 @@ async function start() {
         });
 
         const servicesData = [
-            { label: 'Сервисов инициализировано', value: '5/5', color: 'green' },
+            { label: 'Сервисов инициализировано', value: '4/4', color: 'green' },
             { label: 'Плагинов загружено', value: `${pluginsCount}/${pluginsCount}`, color: 'green' },
             { label: 'HTTP Server', value: `http://localhost:${httpPort}`, color: 'cyan' },
         ];

@@ -19,8 +19,8 @@
     "diagnose-twitch": "node scripts/diagnose-twitch-irc.js",
     "keylistener": "python tools/key_listener.py",
     "keylistener:admin": "tools/run_keylistener_admin.bat",
-    "start": "concurrently \"npm run server\" \"npm run keylistener\" \"npm run dev\" --names \"SERVER,KEYS,VITE\" --prefix-colors \"yellow,green,cyan\" --kill-others-on-fail",
-    "start:admin": "concurrently \"npm run server\" \"npm run keylistener:admin\" \"npm run dev\" --names \"SERVER,KEYS,VITE\" --prefix-colors \"yellow,green,cyan\" --kill-others-on-fail"
+    "start": "concurrently \"npm run server\" \"npm run dev\" --names \"SERVER,VITE\" --prefix-colors \"yellow,cyan\" --kill-others-on-fail",
+    "start:admin": "concurrently \"npm run server\" \"npm run dev\" --names \"SERVER,VITE\" --prefix-colors \"yellow,cyan\" --kill-others-on-fail"
   },
   "dependencies": {
     "@twurple/api": "^8.0.2",

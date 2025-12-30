@@ -19,7 +19,14 @@ let broadcasterId = null;
 
 const SHOUTOUT_MESSAGE_MAX_LENGTH = 200;
 const TOKEN_EXPIRES_IN = 14400;
-const REQUIRED_SCOPES = ['channel:read:redemptions', 'channel:manage:redemptions'];
+// ВАЖНО: Для проверки подписки пользователей нужен scope 'channel:read:subscriptions'
+// Если токен не имеет этого scope, проверка подписки будет возвращать false без ошибок
+// Чтобы добавить этот scope, нужно переавторизоваться через Twitch OAuth с новыми scopes
+const REQUIRED_SCOPES = [
+    'channel:read:redemptions',
+    'channel:manage:redemptions',
+    'channel:read:subscriptions' // Для проверки подписки пользователей
+];
 
 export function getAuthProvider() {
     return authProvider;

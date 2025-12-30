@@ -31,10 +31,10 @@ class StreamSessionService {
             this.updateViewerCount(data.viewerCount);
         }
 
-        logger.info('[STREAM_SESSION] Стрим начался', {
-            startTime: this.sessionStartTime.toISOString(),
-            viewerCount: this.currentViewerCount
-        });
+        logger.info(
+            '[STREAM_SESSION] Стрим начался',
+            `startTime: ${this.sessionStartTime.toISOString()}, viewerCount: ${this.currentViewerCount}`
+        );
     }
 
     handleStreamOffline() {
@@ -51,9 +51,7 @@ class StreamSessionService {
         this.sessionStartTime = null;
         this.updateViewerCount(null);
 
-        logger.info('[STREAM_SESSION] Стрим закончился', {
-            durationMinutes: sessionDuration
-        });
+        logger.info('[STREAM_SESSION] Стрим закончился', `durationMinutes: ${sessionDuration}`);
     }
 
     getIsLive() {
@@ -80,7 +78,7 @@ class StreamSessionService {
             });
 
             if (newCount !== null) {
-                logger.debug(`[STREAM_SESSION] Количество зрителей: ${newCount}${previousCount !== null ? ` (было: ${previousCount})` : ''}`);
+                logger.info(`[STREAM_SESSION] Количество зрителей: ${newCount}${previousCount !== null ? ` (было: ${previousCount})` : ''}`);
             }
         }
     }
@@ -102,9 +100,8 @@ class StreamSessionService {
             const streams = await apiClient.streams.getStreamByUserId(broadcasterId);
 
             if (streams && !this.isLive) {
-                logger.info('[STREAM_SESSION] Стрим уже онлайн при запуске бота', {
-                    startedAt: streams.startDate?.toISOString()
-                });
+                const startedAt = streams.startDate?.toISOString() || 'неизвестно';
+                logger.info('[STREAM_SESSION] Стрим уже онлайн при запуске бота', `startedAt: ${startedAt}`);
                 this.updateViewerCount(streams.viewers);
                 eventBus.emit('stream:online', {
                     startedAt: streams.startDate?.toISOString() || new Date().toISOString()
@@ -127,9 +124,10 @@ class StreamSessionService {
             return null;
         }
 
-        logger.info('[STREAM_SESSION] Запущена периодическая проверка статуса стрима', {
-            intervalSeconds: intervalMs / 1000
-        });
+        logger.info(
+            '[STREAM_SESSION] Запущена периодическая проверка статуса стрима',
+            `intervalSeconds: ${intervalMs / 1000}`
+        );
 
         const intervalId = setInterval(async () => {
             try {
@@ -137,9 +135,11 @@ class StreamSessionService {
                 const currentlyLive = !!streams;
 
                 if (currentlyLive && !this.isLive) {
-                    logger.info('[STREAM_SESSION] Стрим стал онлайн (обнаружено через периодическую проверку)', {
-                        startedAt: streams.startDate?.toISOString()
-                    });
+                    const startedAt = streams.startDate?.toISOString() || 'неизвестно';
+                    logger.info(
+                        '[STREAM_SESSION] Стрим стал онлайн (обнаружено через периодическую проверку)',
+                        `startedAt: ${startedAt}`
+                    );
                     this.updateViewerCount(streams.viewers);
                     eventBus.emit('stream:online', {
                         startedAt: streams.startDate?.toISOString() || new Date().toISOString()

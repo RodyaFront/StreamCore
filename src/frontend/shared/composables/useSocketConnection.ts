@@ -169,6 +169,26 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
                 onChatMessageHandler(data);
             });
         }
+
+        if (handlers.onChatMessageEnriched) {
+            const onChatMessageEnrichedHandler = handlers.onChatMessageEnriched;
+            socket.value.on('chat:message:enriched', (data: unknown) => {
+                if (!data || typeof data !== 'object') {
+                    const errorMsg = 'Получены некорректные данные события chat:message:enriched';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('chat:message:enriched', data, errorMsg);
+                    return;
+                }
+                const enrichedData = data as ChatMessageEnrichedEvent;
+                if (!enrichedData.messageId || typeof enrichedData.isSubscriber !== 'boolean') {
+                    const errorMsg = 'Получены некорректные данные события chat:message:enriched (отсутствует messageId или isSubscriber)';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('chat:message:enriched', data, errorMsg);
+                    return;
+                }
+                onChatMessageEnrichedHandler(enrichedData);
+            });
+        }
     };
 
     const disconnect = (): void => {
