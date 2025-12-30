@@ -520,6 +520,18 @@ export async function initTwitchEventSub() {
         if (statusCheckInterval) {
             logger.info('[STREAM_SESSION] Периодическая проверка статуса стрима активна (каждые 60 секунд)');
         }
+
+        // Инициализируем UserInfoService для получения информации о пользователях
+        const { getUserInfoService } = await import('../chat/UserInfoService.js');
+        const userInfoService = getUserInfoService();
+        userInfoService.initialize(apiClient, user.id);
+        logger.info('[CHAT] UserInfoService инициализирован для получения уровня и подписки пользователей');
+
+        // Инициализируем EmoteService для рендеринга эмодзи
+        const { getEmoteService } = await import('../chat/EmoteService.js');
+        const emoteService = getEmoteService();
+        emoteService.initialize(apiClient, user.id);
+        logger.info('[CHAT] EmoteService инициализирован для рендеринга эмодзи');
     } catch (error) {
         logger.error('[REWARDS] Ошибка при инициализации EventSub:', error.message || error);
     }

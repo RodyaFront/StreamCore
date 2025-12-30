@@ -2,10 +2,16 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_CONFIG } from '@shared/config/socket.js';
 import { SOCKET_RETRY_CONFIG } from '@shared/constants/expLogger';
-import { isValidExpAddedEvent, isValidLevelUpEvent, isValidUserInfoAlertEvent, isValidShoutoutAlertEvent, isValidViewersUpdatedEvent } from '@shared/utils/validation';
+import { isValidExpAddedEvent, isValidLevelUpEvent, isValidUserInfoAlertEvent, isValidShoutoutAlertEvent, isValidViewersUpdatedEvent, isValidChatMessageEvent } from '@shared/utils/validation';
 import type { ExpAddedEvent, LevelUpEvent } from '@shared/types';
 import type { UserInfoAlertEvent, ShoutoutAlertEvent } from '@shared/types/alerts';
 import type { ViewersUpdatedEvent } from '@shared/types/stream';
+import type { ChatMessageEvent } from '@shared/types/chat';
+
+interface ChatMessageEnrichedEvent {
+    messageId: string;
+    isSubscriber: boolean;
+}
 
 interface SocketEventHandlers {
     onExpAdded?: (data: ExpAddedEvent) => void;
@@ -13,6 +19,8 @@ interface SocketEventHandlers {
     onUserInfoAlert?: (data: UserInfoAlertEvent) => void;
     onShoutoutAlert?: (data: ShoutoutAlertEvent) => void;
     onViewersUpdated?: (data: ViewersUpdatedEvent) => void;
+    onChatMessage?: (data: ChatMessageEvent) => void;
+    onChatMessageEnriched?: (data: ChatMessageEnrichedEvent) => void;
     onConnect?: () => void;
     onDisconnect?: () => void;
     onError?: (error: Error) => void;
@@ -148,6 +156,19 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
                 onViewersUpdatedHandler(data);
             });
         }
+
+        if (handlers.onChatMessage) {
+            const onChatMessageHandler = handlers.onChatMessage;
+            socket.value.on('chat:message', (data: unknown) => {
+                if (!isValidChatMessageEvent(data)) {
+                    const errorMsg = 'Получены некорректные данные события chat:message';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('chat:message', data, errorMsg);
+                    return;
+                }
+                onChatMessageHandler(data);
+            });
+        }
     };
 
     const disconnect = (): void => {
@@ -164,6 +185,8 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
             socket.value.off('alert:user_info');
             socket.value.off('alert:shoutout');
             socket.value.off('stream:viewers:updated');
+            socket.value.off('chat:message');
+            socket.value.off('chat:message:enriched');
             socket.value.disconnect();
             socket.value = null;
             isConnected.value = false;

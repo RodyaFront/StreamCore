@@ -33,6 +33,9 @@ async function start() {
         const { initializeFirstMessageBonusHandler } = await import('./services/bonuses/FirstMessageBonusHandler.js');
         initializeFirstMessageBonusHandler();
 
+        const { initializeChatEventHandler } = await import('./services/chat/ChatEventHandler.js');
+        initializeChatEventHandler();
+
         logger.startTiming('udp');
         await serviceManager.initialize('udp');
         logger.timedSuccess('UDP Server', 'udp', 'порт 3002');

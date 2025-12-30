@@ -49,6 +49,20 @@ export const SocketIOService = {
                 this.io.emit('stream:viewers:updated', data);
             }
         });
+
+        // Транслируем события чата клиентам
+        eventBus.on('chat:message', (data) => {
+            if (this.io) {
+                this.io.emit('chat:message', data);
+            }
+        });
+
+        // Транслируем обновления сообщений (обогащение информацией о подписке)
+        eventBus.on('chat:message:enriched', (data) => {
+            if (this.io) {
+                this.io.emit('chat:message:enriched', data);
+            }
+        });
     },
 
     getIO() {

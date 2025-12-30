@@ -5,6 +5,7 @@ import ExpLoggerPage from '../../../pages/exp-logger';
 import DebugPage from '../../../pages/debug';
 import AlertsPage from '../../../pages/alerts';
 import ViewersCountPage from '../../../pages/viewers-count';
+import ChatPage from '../../../pages/chat';
 
 const routes = [
     {
@@ -36,6 +37,11 @@ const routes = [
         path: '/viewers-count',
         name: 'ViewersCount',
         component: ViewersCountPage
+    },
+    {
+        path: '/chat',
+        name: 'Chat',
+        component: ChatPage
     }
 ];
 

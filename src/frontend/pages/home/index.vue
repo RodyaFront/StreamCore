@@ -5,6 +5,7 @@
             <router-link to="/pda">PDA</router-link>
             <router-link to="/exp-logger">EXP Logger</router-link>
             <router-link to="/alerts">Alerts</router-link>
+            <router-link to="/chat">Chat</router-link>
             <router-link to="/viewers-count">Viewers Count</router-link>
             <router-link to="/debug">Debug</router-link>
         </nav>

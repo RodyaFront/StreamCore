@@ -170,6 +170,16 @@ class TwitchIRCClient extends EventEmitter {
             }
 
             this.emit('message', channel, { username, 'display-name': username }, message, false);
+
+            // Эмитим событие для обработчика чата
+            eventBus.emit('twitch:irc:message', {
+                username,
+                displayName: username,
+                message,
+                channel,
+                isCommand
+            });
+
             return;
         }
 

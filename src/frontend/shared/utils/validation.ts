@@ -1,6 +1,7 @@
 import type { ExpAddedEvent, LevelUpEvent, ExpSource } from '@shared/types';
 import type { UserInfoAlertEvent, ShoutoutAlertEvent } from '@shared/types/alerts';
 import type { ViewersUpdatedEvent } from '@shared/types/stream';
+import type { ChatMessageEvent } from '@shared/types/chat';
 
 const VALID_EXP_SOURCES: ExpSource[] = ['message', 'word_of_day', 'achievement', 'quest', 'streak', 'reward', 'first_message', 'unknown'];
 
@@ -147,6 +148,61 @@ export function isValidViewersUpdatedEvent(data: unknown): data is ViewersUpdate
     }
 
     if (typeof event.timestamp !== 'string' || event.timestamp.trim() === '') {
+        return false;
+    }
+
+    return true;
+}
+
+export function isValidChatMessageEvent(data: unknown): data is ChatMessageEvent {
+    if (!data || typeof data !== 'object') {
+        return false;
+    }
+
+    const event = data as Record<string, unknown>;
+
+    if (typeof event.id !== 'string' || event.id.trim() === '') {
+        return false;
+    }
+
+    if (typeof event.username !== 'string' || event.username.trim() === '') {
+        return false;
+    }
+
+    if (typeof event.displayName !== 'string' || event.displayName.trim() === '') {
+        return false;
+    }
+
+    if (typeof event.message !== 'string') {
+        return false;
+    }
+
+    if (typeof event.timestamp !== 'string' || event.timestamp.trim() === '') {
+        return false;
+    }
+
+    if (typeof event.channel !== 'string' || event.channel.trim() === '') {
+        return false;
+    }
+
+    if (typeof event.isCommand !== 'boolean') {
+        return false;
+    }
+
+    // Опциональные поля
+    if (event.level !== undefined && (typeof event.level !== 'number' || event.level < 1 || !Number.isInteger(event.level))) {
+        return false;
+    }
+
+    if (event.isSubscriber !== undefined && typeof event.isSubscriber !== 'boolean') {
+        return false;
+    }
+
+    if (event.badges !== undefined && !Array.isArray(event.badges)) {
+        return false;
+    }
+
+    if (event.color !== undefined && typeof event.color !== 'string') {
         return false;
     }
 
