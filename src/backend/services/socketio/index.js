@@ -42,6 +42,13 @@ export const SocketIOService = {
                 this.io.emit('alert:shoutout', data);
             }
         });
+
+        // Транслируем события стрима клиентам
+        eventBus.on('stream:viewers:updated', (data) => {
+            if (this.io) {
+                this.io.emit('stream:viewers:updated', data);
+            }
+        });
     },
 
     getIO() {

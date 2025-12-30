@@ -4,6 +4,7 @@ import { HomePage } from '../../../pages/home';
 import ExpLoggerPage from '../../../pages/exp-logger';
 import DebugPage from '../../../pages/debug';
 import AlertsPage from '../../../pages/alerts';
+import ViewersCountPage from '../../../pages/viewers-count';
 
 const routes = [
     {
@@ -30,6 +31,11 @@ const routes = [
         path: '/alerts',
         name: 'Alerts',
         component: AlertsPage
+    },
+    {
+        path: '/viewers-count',
+        name: 'ViewersCount',
+        component: ViewersCountPage
     }
 ];
 

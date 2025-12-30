@@ -25,3 +25,5 @@
 4. Серия стримов
 5. Участие > X минут
 6. Слово дня
+
+https://twitchtokengenerator.com/quick/rTjkyEylDl

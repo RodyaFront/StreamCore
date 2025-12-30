@@ -2,15 +2,17 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_CONFIG } from '@shared/config/socket.js';
 import { SOCKET_RETRY_CONFIG } from '@shared/constants/expLogger';
-import { isValidExpAddedEvent, isValidLevelUpEvent, isValidUserInfoAlertEvent, isValidShoutoutAlertEvent } from '@shared/utils/validation';
+import { isValidExpAddedEvent, isValidLevelUpEvent, isValidUserInfoAlertEvent, isValidShoutoutAlertEvent, isValidViewersUpdatedEvent } from '@shared/utils/validation';
 import type { ExpAddedEvent, LevelUpEvent } from '@shared/types';
 import type { UserInfoAlertEvent, ShoutoutAlertEvent } from '@shared/types/alerts';
+import type { ViewersUpdatedEvent } from '@shared/types/stream';
 
 interface SocketEventHandlers {
     onExpAdded?: (data: ExpAddedEvent) => void;
     onLevelUp?: (data: LevelUpEvent) => void;
     onUserInfoAlert?: (data: UserInfoAlertEvent) => void;
     onShoutoutAlert?: (data: ShoutoutAlertEvent) => void;
+    onViewersUpdated?: (data: ViewersUpdatedEvent) => void;
     onConnect?: () => void;
     onDisconnect?: () => void;
     onError?: (error: Error) => void;
@@ -133,6 +135,19 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
                 onShoutoutAlertHandler(data as ShoutoutAlertEvent);
             });
         }
+
+        if (handlers.onViewersUpdated) {
+            const onViewersUpdatedHandler = handlers.onViewersUpdated;
+            socket.value.on('stream:viewers:updated', (data: unknown) => {
+                if (!isValidViewersUpdatedEvent(data)) {
+                    const errorMsg = 'Получены некорректные данные события stream:viewers:updated';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('stream:viewers:updated', data, errorMsg);
+                    return;
+                }
+                onViewersUpdatedHandler(data);
+            });
+        }
     };
 
     const disconnect = (): void => {
@@ -148,6 +163,7 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
             socket.value.off('level:up');
             socket.value.off('alert:user_info');
             socket.value.off('alert:shoutout');
+            socket.value.off('stream:viewers:updated');
             socket.value.disconnect();
             socket.value = null;
             isConnected.value = false;

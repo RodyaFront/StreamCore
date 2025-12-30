@@ -4,6 +4,7 @@ class StreamSessionService {
     constructor() {
         this.isLive = false;
         this.sessionStartTime = null;
+        this.currentViewerCount = null;
         this.initializeEventListeners();
     }
 
@@ -26,8 +27,13 @@ class StreamSessionService {
         this.isLive = true;
         this.sessionStartTime = data?.startedAt ? new Date(data.startedAt) : new Date();
 
+        if (data?.viewerCount !== undefined && data.viewerCount !== null) {
+            this.updateViewerCount(data.viewerCount);
+        }
+
         logger.info('[STREAM_SESSION] Стрим начался', {
-            startTime: this.sessionStartTime.toISOString()
+            startTime: this.sessionStartTime.toISOString(),
+            viewerCount: this.currentViewerCount
         });
     }
 
@@ -43,6 +49,7 @@ class StreamSessionService {
 
         this.isLive = false;
         this.sessionStartTime = null;
+        this.updateViewerCount(null);
 
         logger.info('[STREAM_SESSION] Стрим закончился', {
             durationMinutes: sessionDuration
@@ -57,9 +64,31 @@ class StreamSessionService {
         return this.sessionStartTime;
     }
 
+    getViewerCount() {
+        return this.currentViewerCount;
+    }
+
+    updateViewerCount(newCount) {
+        if (this.currentViewerCount !== newCount) {
+            const previousCount = this.currentViewerCount;
+            this.currentViewerCount = newCount;
+
+            eventBus.emit('stream:viewers:updated', {
+                viewerCount: newCount,
+                previousCount: previousCount,
+                timestamp: new Date().toISOString()
+            });
+
+            if (newCount !== null) {
+                logger.debug(`[STREAM_SESSION] Количество зрителей: ${newCount}${previousCount !== null ? ` (было: ${previousCount})` : ''}`);
+            }
+        }
+    }
+
     reset() {
         this.isLive = false;
         this.sessionStartTime = null;
+        this.currentViewerCount = null;
         logger.info('[STREAM_SESSION] Состояние стрима сброшено');
     }
 
@@ -76,12 +105,16 @@ class StreamSessionService {
                 logger.info('[STREAM_SESSION] Стрим уже онлайн при запуске бота', {
                     startedAt: streams.startDate?.toISOString()
                 });
+                this.updateViewerCount(streams.viewers);
                 eventBus.emit('stream:online', {
                     startedAt: streams.startDate?.toISOString() || new Date().toISOString()
                 });
             } else if (!streams && this.isLive) {
                 logger.info('[STREAM_SESSION] Стрим уже оффлайн при запуске бота');
+                this.updateViewerCount(null);
                 eventBus.emit('stream:offline');
+            } else if (streams && this.isLive) {
+                this.updateViewerCount(streams.viewers);
             }
         } catch (error) {
             logger.error('[STREAM_SESSION] Ошибка при проверке статуса стрима:', error.message);
@@ -107,12 +140,16 @@ class StreamSessionService {
                     logger.info('[STREAM_SESSION] Стрим стал онлайн (обнаружено через периодическую проверку)', {
                         startedAt: streams.startDate?.toISOString()
                     });
+                    this.updateViewerCount(streams.viewers);
                     eventBus.emit('stream:online', {
                         startedAt: streams.startDate?.toISOString() || new Date().toISOString()
                     });
                 } else if (!currentlyLive && this.isLive) {
                     logger.info('[STREAM_SESSION] Стрим стал оффлайн (обнаружено через периодическую проверку)');
+                    this.updateViewerCount(null);
                     eventBus.emit('stream:offline');
+                } else if (currentlyLive && this.isLive) {
+                    this.updateViewerCount(streams.viewers);
                 }
             } catch (error) {
                 logger.error('[STREAM_SESSION] Ошибка при периодической проверке статуса стрима:', error.message);

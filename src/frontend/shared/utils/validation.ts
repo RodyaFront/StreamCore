@@ -1,5 +1,6 @@
 import type { ExpAddedEvent, LevelUpEvent, ExpSource } from '@shared/types';
 import type { UserInfoAlertEvent, ShoutoutAlertEvent } from '@shared/types/alerts';
+import type { ViewersUpdatedEvent } from '@shared/types/stream';
 
 const VALID_EXP_SOURCES: ExpSource[] = ['message', 'word_of_day', 'achievement', 'quest', 'streak', 'reward', 'first_message', 'unknown'];
 
@@ -124,6 +125,28 @@ export function isValidShoutoutAlertEvent(data: unknown): data is ShoutoutAlertE
     }
 
     if (typeof event.message !== 'string' || event.message.trim() === '') {
+        return false;
+    }
+
+    return true;
+}
+
+export function isValidViewersUpdatedEvent(data: unknown): data is ViewersUpdatedEvent {
+    if (!data || typeof data !== 'object') {
+        return false;
+    }
+
+    const event = data as Record<string, unknown>;
+
+    if (event.viewerCount !== null && (typeof event.viewerCount !== 'number' || event.viewerCount < 0 || !Number.isInteger(event.viewerCount))) {
+        return false;
+    }
+
+    if (event.previousCount !== null && event.previousCount !== undefined && (typeof event.previousCount !== 'number' || event.previousCount < 0 || !Number.isInteger(event.previousCount))) {
+        return false;
+    }
+
+    if (typeof event.timestamp !== 'string' || event.timestamp.trim() === '') {
         return false;
     }
 

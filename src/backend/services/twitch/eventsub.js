@@ -419,14 +419,26 @@ function setupEventSubListeners(eventSubListener, userId, channel) {
     eventSubListener.onChannelRedemptionAdd(userId, handleRedemptionEvent);
 
     try {
-        eventSubListener.onStreamOnline(userId, (event) => {
+        eventSubListener.onStreamOnline(userId, async (event) => {
             logger.info('[STREAM] Стрим начался', {
                 startedAt: event.startDate.toISOString(),
                 title: event.title
             });
+
+            let viewerCount = null;
+            try {
+                const stream = await event.getStream();
+                if (stream) {
+                    viewerCount = stream.viewers;
+                }
+            } catch (error) {
+                logger.warning('[STREAM] Не удалось получить информацию о стриме из события', error.message);
+            }
+
             eventBus.emit('stream:online', {
                 startedAt: event.startDate.toISOString(),
-                title: event.title
+                title: event.title,
+                viewerCount: viewerCount
             });
         });
     } catch (error) {
