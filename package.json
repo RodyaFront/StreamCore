@@ -28,7 +28,9 @@
     "@twurple/eventsub-ws": "^8.0.2",
     "better-sqlite3": "^12.5.0",
     "dotenv": "^17.2.3",
+    "gsap": "^3.14.2",
     "lucide-vue-next": "^0.562.0",
+    "matter-js": "^0.20.0",
     "socket.io": "^4.5.4",
     "socket.io-client": "^4.5.4",
     "tinycolor2": "^1.6.0",
@@ -39,6 +41,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/vite": "^4.1.18",
+    "@types/matter-js": "^0.20.2",
     "@types/node": "^25.0.3",
     "@types/tinycolor2": "^1.4.6",
     "@vitejs/plugin-vue": "^5.0.0",
