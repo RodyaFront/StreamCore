@@ -1,5 +1,5 @@
 <template>
-    <div class="h-screen w-screen flex flex-col">
+    <div class="h-screen w-screen bg-black flex flex-col">
         <div
             class="flex-1 overflow-hidden p-4 space-y-1 flex flex-col justify-end"
         >
@@ -75,6 +75,18 @@
                     Упоминание + Ссылка
                 </button>
             </div>
+            <div class="flex flex-wrap gap-2 mb-2">
+                <span class="text-xs text-gray-400 self-center mr-2">Тест цветов уровней:</span>
+                <button
+                    v-for="levelConfig in levelTestConfigs"
+                    :key="levelConfig.level"
+                    @click="sendTestMessageWithLevel(levelConfig.level)"
+                    class="px-3 py-1.5 text-xs rounded border transition-colors text-white hover:opacity-80"
+                    :style="getButtonStyle(levelConfig.color)"
+                >
+                    Lv.{{ levelConfig.level }} ({{ levelConfig.name }})
+                </button>
+            </div>
             <div class="flex items-center gap-2">
                 <button
                     @click="showDebugControls = !showDebugControls"
@@ -106,6 +118,8 @@ import ChatMessage from '@shared/components/ChatMessage.vue';
 import { useChat } from '@shared/composables/useChat';
 import { useSocketConnection } from '@shared/composables/useSocketConnection';
 import type { ChatMessageEvent } from '@shared/types/chat';
+import { LEVEL_COLOR_CHECKPOINTS } from '@shared/utils/levelColors';
+import { getLevelCategory } from '@shared/utils/levelColors';
 
 const { messages, addMessage, updateMessage, clearMessages, cleanup } = useChat({
     maxMessages: 100
@@ -117,6 +131,38 @@ const visibleMessages = computed(() => {
 
 const isConnected = ref(false);
 const showDebugControls = ref(true);
+
+const levelTestConfigs = computed(() => {
+    return LEVEL_COLOR_CHECKPOINTS.map((checkpoint) => {
+        const testLevel = checkpoint.maxLevel === Infinity
+            ? 95
+            : Math.floor((checkpoint.minLevel + checkpoint.maxLevel) / 2);
+        return {
+            level: testLevel,
+            name: getLevelCategory(testLevel),
+            color: checkpoint.color
+        };
+    });
+});
+
+const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+        ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16)
+          }
+        : { r: 107, g: 114, b: 128 };
+};
+
+const getButtonStyle = (color: string) => {
+    const rgb = hexToRgb(color);
+    return {
+        backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`,
+        borderColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`
+    };
+};
 
 const generateMessageId = () => {
     return `test-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -253,6 +299,32 @@ const sendTestMessage = (type: string) => {
         default:
             addMessage(baseMessage);
     }
+};
+
+const sendTestMessageWithLevel = (level: number) => {
+    const levelNames: Record<number, string> = {
+        5: 'Серый',
+        15: 'Синий',
+        25: 'Голубой',
+        35: 'Зелёный',
+        45: 'Жёлтый',
+        55: 'Оранжевый',
+        65: 'Красный',
+        75: 'Фиолетовый',
+        85: 'Розовый',
+        95: 'Золотой'
+    };
+
+    addMessage({
+        id: generateMessageId(),
+        username: `level${level}user`,
+        displayName: `Level${level}User`,
+        message: `Тестовое сообщение с уровнем ${level} (${levelNames[level] || 'Неизвестный'})`,
+        timestamp: new Date().toISOString(),
+        channel: '#test',
+        isCommand: false,
+        level: level
+    });
 };
 
 useSocketConnection({

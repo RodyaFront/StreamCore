@@ -9,7 +9,7 @@
       <div v-if="isFirstMessage" class="text-amber-400 text-xs absolute top-2 left-2 text-shadow-xl font-medium">Впервые с нами!</div>
       <Sparkles v-if="isFirstMessage" :size="16" color="#fbbf24" class="absolute top-2 right-2"/>
       <div
-        class="flex items-center gap-1.5 shrink-0 px-2 pr-1 py-1 text-white rounded-full -mb-2 -ml-2 z-2 shadow-lg"
+        class="flex items-center gap-1.5 shrink-0 pl-3 pr-1 py-1 text-white rounded-full -mb-2 -ml-2 z-2 shadow-lg"
         :style="{
           transform: `rotate(${randomRotation}deg)`,
           backgroundColor: randomBackgroundColor,
@@ -22,22 +22,24 @@
         }"
       >
         <Star v-if="message.isSubscriber" color=white :size="18" :stroke-width="1" :fill="getUsernameColor(message.username)" />
-        <span v-else class="w-3 h-3 ring ring-white rounded-full" :style="{ backgroundColor: getUsernameColor(message.username) }"></span>
         <span class="font-bold pr-2 text-sm shrink-0">
           {{ message.displayName }}
         </span>
         <span
           v-if="message.level"
-          class="text-xs -ml-2 font-medium px-2 py-1 rounded-full text-white"
-          :style="{ backgroundColor: levelColor }"
+          class="level-badge text-xs -ml-2 font-medium px-2 py-1 rounded-full text-white relative isolation-isolate"
+          :class="{ 'has-glow-effect': message.level >= 45 }"
+          :style="levelBadgeStyle"
         >
-          {{ message.level }} ур.
+          <span v-if="message.level >= 45" class="level-badge-shimmer"></span>
+          <span class="level-badge-text relative z-10">{{ message.level }} ур.</span>
         </span>
         <span
           v-if="message.isSubscriber"
-          class="text-xs -ml-1 font-medium px-2 py-1 rounded-full text-white bg-green-700"
+          class="flex text-xs -ml-0.5 font-medium px-2 py-1 rounded-full text-whit"
+          :style="subscriberBadgeStyle"
         >
-          Спонсор
+          Бро
         </span>
       </div>
       <div class="relative message-content__wrapper">
@@ -89,6 +91,72 @@ const displayMessage = computed(() => {
 
 const levelColor = computed(() => getLevelColor(props.message.level));
 
+
+const subscriberBadgeStyle = computed(() => {
+  if (!props.message.isSubscriber) {
+    return {};
+  }
+
+  const baseColor = tinycolor('#10b981');
+
+  const darkenedColor = baseColor
+    .clone()
+    .spin(-100)
+    .darken(5)
+    .toRgbString();
+
+  // Градиент от левого нижнего угла к правому верхнему
+  const gradient = `linear-gradient(to top right, ${baseColor.toRgbString()}, ${darkenedColor})`;
+
+  // Бордер с прозрачностью 0.5 от основного цвета
+  const borderColor = baseColor.setAlpha(0.5).lighten(15).toRgbString();
+
+  return {
+    background: gradient,
+    border: `1px dashed ${borderColor}`
+  };
+});
+
+
+const levelBadgeStyle = computed(() => {
+  if (!props.message.level) {
+    return {};
+  }
+
+  const baseColor = tinycolor(levelColor.value);
+  const hsl = baseColor.toHsl();
+
+  // Затемнённый цвет с немного смещённым оттенком для правого верхнего угла
+  const darkenedColor = baseColor
+    .clone()
+    .spin(-50)
+    .toRgbString();
+
+  // Градиент от левого нижнего угла к правому верхнему
+  const gradient = `linear-gradient(to top right, ${baseColor.toRgbString()}, ${darkenedColor})`;
+
+  // Бордер с прозрачностью 0.5 от основного цвета
+  const borderColor = baseColor.setAlpha(0.5).lighten(15).toRgbString();
+
+  // Цвета для свечения (немного смещённые оттенки)
+  const glowColor1 = baseColor.clone().spin(20).toHsl();
+  const glowColor2 = baseColor.clone().spin(-20).toHsl();
+
+  return {
+    background: gradient,
+    border: `1px dashed ${borderColor}`,
+    '--glow-hue-1': `${Math.round(hsl.h)}deg`,
+    '--glow-hue-2': `${Math.round(glowColor1.h)}deg`,
+    '--glow-hue-3': `${Math.round(glowColor2.h)}deg`,
+    '--glow-sat-1': `${Math.round(hsl.s * 100)}%`,
+    '--glow-lit-1': `${Math.round(hsl.l * 100)}%`,
+    '--glow-sat-2': `${Math.round(glowColor1.s * 100)}%`,
+    '--glow-lit-2': `${Math.round(glowColor1.l * 100)}%`,
+    '--glow-sat-3': `${Math.round(glowColor2.s * 100)}%`,
+    '--glow-lit-3': `${Math.round(glowColor2.l * 100)}%`
+  };
+});
+
 const borderColor = computed(() => {
   const color = getUsernameColor(props.message.username);
   return tinycolor(color).setAlpha(0.3).toRgbString();
@@ -100,6 +168,68 @@ const isFirstMessage = computed(() => {
 </script>
 
 <style scoped>
+@property --mask {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes level-badge-spin {
+  0% {
+    --mask: 0deg;
+  }
+  100% {
+    --mask: 360deg;
+  }
+}
+
+.level-badge-shimmer {
+  position: absolute;
+  inset: -8px;
+  border-radius: inherit;
+  mix-blend-mode: plus-lighter;
+  pointer-events: none;
+  opacity: 1;
+  mask-image: conic-gradient(
+    from var(--mask, 0deg),
+    transparent 0%,
+    transparent 10%,
+    black 36%,
+    black 45%,
+    transparent 50%,
+    transparent 60%,
+    black 85%,
+    black 95%,
+    transparent 100%
+  );
+  mask-size: cover;
+  animation: level-badge-spin 3s linear infinite;
+}
+
+.level-badge-shimmer::before,
+.level-badge-shimmer::after {
+  content: "";
+  border-radius: inherit;
+  position: absolute;
+  inset: 8px;
+}
+
+.level-badge-shimmer::before {
+  box-shadow:
+    0 0 3px 2px hsl(var(--glow-hue-1) var(--glow-sat-1) var(--glow-lit-1) / 0.8),
+    0 0 7px 4px hsl(var(--glow-hue-1) var(--glow-sat-1) var(--glow-lit-1) / 0.6),
+    0 0 13px 8px hsl(var(--glow-hue-2) var(--glow-sat-2) var(--glow-lit-2) / 0.4),
+    0 0 22px 6px hsl(var(--glow-hue-2) var(--glow-sat-2) var(--glow-lit-2) / 0.2);
+  z-index: -1;
+}
+
+.level-badge-shimmer::after {
+  box-shadow:
+    inset 0 0 0 1px hsl(var(--glow-hue-2) var(--glow-sat-2) var(--glow-lit-2) / 0.9),
+    inset 0 0 3px 1px hsl(var(--glow-hue-2) var(--glow-sat-2) var(--glow-lit-2) / 0.7),
+    inset 0 0 9px 1px hsl(var(--glow-hue-2) var(--glow-sat-2) var(--glow-lit-2) / 0.5);
+  z-index: 2;
+}
 .chat-message-wrapper {
   position: relative;
   display: flex;

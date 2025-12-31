@@ -81,6 +81,15 @@ db.exec(`
         FOREIGN KEY (username) REFERENCES user_stats(username) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS stream_visits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        stream_date DATE NOT NULL,
+        first_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (username) REFERENCES user_stats(username) ON DELETE CASCADE,
+        UNIQUE(username, stream_date)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_messages_username ON messages(username);
     CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
     CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel);
@@ -100,6 +109,10 @@ db.exec(`
 
     CREATE INDEX IF NOT EXISTS idx_user_levels_level ON user_levels(level DESC);
     CREATE INDEX IF NOT EXISTS idx_user_levels_exp ON user_levels(total_exp DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_stream_visits_username ON stream_visits(username);
+    CREATE INDEX IF NOT EXISTS idx_stream_visits_stream_date ON stream_visits(stream_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_stream_visits_username_date ON stream_visits(username, stream_date DESC);
 `);
 
 export { db };

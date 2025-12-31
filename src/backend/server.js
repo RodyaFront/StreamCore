@@ -33,6 +33,9 @@ async function start() {
         const { initializeFirstMessageBonusHandler } = await import('./services/bonuses/FirstMessageBonusHandler.js');
         initializeFirstMessageBonusHandler();
 
+        const { initializeStreakBonusHandler } = await import('./services/bonuses/StreakBonusHandler.js');
+        initializeStreakBonusHandler();
+
         const { initializeChatEventHandler } = await import('./services/chat/ChatEventHandler.js');
         initializeChatEventHandler();
 

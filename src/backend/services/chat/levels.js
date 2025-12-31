@@ -13,6 +13,9 @@ import { db } from '../../database/schema.js';
 import { eventBus } from '../../core/index.js';
 import { logger } from '../../core/logger.js';
 import { QUEUE_CLEANUP_DELAY, MAX_SAFE_EXP } from './config.js';
+import { getStreakService } from '../bonuses/StreakService.js';
+import { STREAK_BONUS } from '../bonuses/constants.js';
+import { getStreamSessionService } from '../stream/StreamSessionService.js';
 
 // Очереди для последовательной обработки наград одного пользователя
 const userQueues = new Map();
@@ -429,6 +432,9 @@ export function getUserLevelInfo(username) {
  * Подписывается на события и обрабатывает их
  */
 export function initializeLevelsEventHandlers() {
+    const streakService = getStreakService();
+    const streamSession = getStreamSessionService();
+
     // Обработка логирования сообщений для начисления опыта
     eventBus.on('message:logged', ({ username, messageLength, isCommand }) => {
         // Не начисляем опыт за команды
@@ -436,12 +442,26 @@ export function initializeLevelsEventHandlers() {
             return;
         }
 
-        const expAmount = calculateMessageExp(messageLength);
-        if (expAmount > 0) {
-            addExp(username, expAmount, 'message').catch((error) => {
-                logger.error(`[LEVELS] Ошибка при добавлении опыта за сообщение для ${username}:`, error);
-            });
+        let expAmount = calculateMessageExp(messageLength);
+        if (expAmount <= 0) {
+            return;
         }
+
+        // Применяем множитель streak, если стрим активен и у пользователя есть streak >= MIN_STREAK
+        if (streamSession.getIsLive()) {
+            const streak = streakService.getCurrentStreak(username);
+            if (streak >= STREAK_BONUS.MIN_STREAK) {
+                expAmount = Math.floor(expAmount * STREAK_BONUS.MULTIPLIER);
+                logger.debug(
+                    `[LEVELS] Применен множитель streak для ${username}`,
+                    `streak: ${streak}, multiplier: ${STREAK_BONUS.MULTIPLIER}, exp: ${expAmount}`
+                );
+            }
+        }
+
+        addExp(username, expAmount, 'message').catch((error) => {
+            logger.error(`[LEVELS] Ошибка при добавлении опыта за сообщение для ${username}:`, error);
+        });
     });
 
     logger.info('[LEVELS] Обработчики событий инициализированы');
