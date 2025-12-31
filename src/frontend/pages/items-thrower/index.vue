@@ -1,29 +1,6 @@
 <template>
     <div class="items-thrower-page">
-        <div class="items-thrower-page__container">
-            <h1 class="items-thrower-page__title">Items Thrower</h1>
-            <div class="items-thrower-page__status" :class="{ 'connected': isConnected }">
-                <span class="status-indicator" :class="{ 'connected': isConnected }"></span>
-                <span>{{ isConnected ? 'Подключено' : 'Отключено' }}</span>
-            </div>
-            <div class="items-thrower-page__logs">
-                <h2 class="logs-title">Логи событий:</h2>
-                <div class="logs-container">
-                    <div
-                        v-for="(log, index) in logs"
-                        :key="index"
-                        class="log-item"
-                    >
-                        <span class="log-time">{{ log.time }}</span>
-                        <span class="log-username">{{ log.username }}</span>
-                        <span class="log-message">бросил предмет</span>
-                    </div>
-                    <div v-if="logs.length === 0" class="logs-empty">
-                        Ожидание событий...
-                    </div>
-                </div>
-            </div>
-        </div>
+        Thrower
     </div>
 </template>
 
