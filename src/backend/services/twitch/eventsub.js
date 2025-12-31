@@ -427,10 +427,10 @@ function setupEventSubListeners(eventSubListener, userId, channel) {
 
     try {
         eventSubListener.onStreamOnline(userId, async (event) => {
-            logger.info('[STREAM] Стрим начался', {
-                startedAt: event.startDate.toISOString(),
-                title: event.title
-            });
+            logger.info(
+                '[STREAM] Стрим начался',
+                `startedAt: ${event.startDate.toISOString()}, title: ${event.title}`
+            );
 
             let viewerCount = null;
             try {

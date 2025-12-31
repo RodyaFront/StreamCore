@@ -33,9 +33,10 @@ class FirstMessageBonusService {
     reset() {
         const previousCount = this.bonusRecipients.size;
         this.bonusRecipients.clear();
-        logger.info('[FIRST_MESSAGE_BONUS] Состояние бонусов сброшено', {
-            previousRecipientsCount: previousCount
-        });
+        logger.info(
+            '[FIRST_MESSAGE_BONUS] Состояние бонусов сброшено',
+            `previousRecipientsCount: ${previousCount}`
+        );
     }
 
     async awardBonus(username) {
@@ -66,10 +67,10 @@ class FirstMessageBonusService {
             );
 
             if (result) {
-                logger.info('[FIRST_MESSAGE_BONUS] Бонус начислен', {
-                    username: normalizedUsername,
-                    amount: FIRST_MESSAGE_BONUS.AMOUNT
-                });
+                logger.info(
+                    '[FIRST_MESSAGE_BONUS] Бонус начислен',
+                    `username: ${normalizedUsername}, amount: ${FIRST_MESSAGE_BONUS.AMOUNT}`
+                );
                 return true;
             } else {
                 logger.error('[FIRST_MESSAGE_BONUS] Не удалось начислить опыт для бонуса:', normalizedUsername);

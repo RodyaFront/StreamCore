@@ -12,7 +12,7 @@
             </transition-group>
         </div>
 
-        <div v-if="false" class="px-4 py-3 bg-gray-900/80 border-t border-gray-700">
+        <div v-if="true" class="px-4 py-3 bg-gray-900/80 border-t border-gray-700">
             <div class="flex flex-wrap gap-2 mb-2">
                 <button
                     @click="sendTestMessage('basic')"
@@ -67,6 +67,12 @@
                     class="px-3 py-1.5 text-xs bg-cyan-500/30 hover:bg-cyan-500/50 rounded border border-cyan-400/30 transition-colors text-white"
                 >
                     Первое сообщение
+                </button>
+                <button
+                    @click="sendTestMessage('withMentionAndLink')"
+                    class="px-3 py-1.5 text-xs bg-teal-500/30 hover:bg-teal-500/50 rounded border border-teal-400/30 transition-colors text-white"
+                >
+                    Упоминание + Ссылка
                 </button>
             </div>
             <div class="flex items-center gap-2">
@@ -222,6 +228,25 @@ const sendTestMessage = (type: string) => {
                 message: 'Моё! 🎉',
                 level: 1,
                 isFirstMessage: true
+            });
+            break;
+
+        case 'withMentionAndLink':
+            const mentionLinkMessage = 'Привет @testuser! Проверь эту ссылку: https://www.twitch.tv/testuser очень интересный канал';
+            // Форматируем сообщение для теста (в реальности это делается на backend)
+            let parsedMentionLink = mentionLinkMessage
+                .replace(/@(\w+)/g, '<span class="mention">@$1</span>')
+                .replace(/(https?:\/\/[^\s<>"']+)/gi, (url) => {
+                    const displayUrl = url.length > 50 ? url.substring(0, 47) + '...' : url;
+                    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="message-link">${displayUrl}</a>`;
+                });
+            addMessage({
+                ...baseMessage,
+                username: 'mentionuser',
+                displayName: 'MentionUser',
+                message: mentionLinkMessage,
+                parsedMessage: parsedMentionLink,
+                level: 15
             });
             break;
 

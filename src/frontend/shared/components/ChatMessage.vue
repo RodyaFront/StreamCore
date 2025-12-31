@@ -140,6 +140,7 @@ const isFirstMessage = computed(() => {
 
 .message-content {
   word-wrap: break-word;
+  word-break: break-word;
   line-height: 1.4;
 }
 
@@ -149,6 +150,24 @@ const isFirstMessage = computed(() => {
   height: 1.5em;
   width: auto;
   margin: 0 0.1em;
+}
+
+.message-content :deep(.mention) {
+  color: #60a5fa;
+  font-weight: 600;
+  text-shadow: 0 0 2px rgba(96, 165, 250, 0.5);
+}
+
+.message-content :deep(.message-link) {
+  color: #3b82f6;
+  text-decoration: underline;
+  text-decoration-color: rgba(59, 130, 246, 0.5);
+  word-break: break-all;
+}
+
+.message-content :deep(.message-link:hover) {
+  color: #2563eb;
+  text-decoration-color: rgba(37, 99, 235, 0.8);
 }
 
 .message-content__wrapper {

@@ -125,9 +125,52 @@ class EmoteService {
     }
 
     /**
+     * Подсвечивает упоминания (@username) в тексте
+     * Работает с неэкранированным текстом
+     * @param {string} text - Текст сообщения (не экранированный)
+     * @returns {string} Текст с подсвеченными упоминаниями (HTML)
+     */
+    parseMentions(text) {
+        if (!text || typeof text !== 'string') {
+            return text;
+        }
+
+        const mentionRegex = /@(\w+)/g;
+        return text.replace(mentionRegex, (match, username) => {
+            const escapedMatch = this.escapeHtml(match);
+            return `<span class="mention">${escapedMatch}</span>`;
+        });
+    }
+
+    /**
+     * Форматирует ссылки в тексте
+     * Работает с неэкранированным текстом
+     * @param {string} text - Текст сообщения (не экранированный)
+     * @returns {string} Текст с отформатированными ссылками (HTML)
+     */
+    formatLinks(text) {
+        if (!text || typeof text !== 'string') {
+            return text;
+        }
+
+        const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
+        const MAX_LINK_LENGTH = 50;
+
+        return text.replace(urlRegex, (url) => {
+            const escapedUrl = this.escapeHtml(url);
+            const displayUrl = url.length > MAX_LINK_LENGTH
+                ? url.substring(0, MAX_LINK_LENGTH - 3) + '...'
+                : url;
+            const escapedDisplayUrl = this.escapeHtml(displayUrl);
+            return `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" class="message-link">${escapedDisplayUrl}</a>`;
+        });
+    }
+
+    /**
      * Парсит сообщение и заменяет коды эмодзи на HTML
+     * Также обрабатывает упоминания и ссылки
      * @param {string} message - Текст сообщения
-     * @returns {string} Сообщение с HTML для эмодзи
+     * @returns {string} Сообщение с HTML для эмодзи, упоминаний и ссылок
      */
     parseMessage(message) {
         if (!message || typeof message !== 'string') {
@@ -159,7 +202,29 @@ class EmoteService {
                     `${this.escapeHtml(suffix)}`
                 );
             } else {
-                parts.push(this.escapeHtml(token));
+                let processedToken = token;
+                processedToken = this.parseMentions(processedToken);
+                processedToken = this.formatLinks(processedToken);
+
+                const placeholders = new Map();
+                let placeholderIndex = 0;
+                const placeholderPrefix = '__PLACEHOLDER_';
+                const placeholderSuffix = '__';
+
+                processedToken = processedToken.replace(/<[^>]+>/g, (match) => {
+                    const placeholder = `${placeholderPrefix}${placeholderIndex}${placeholderSuffix}`;
+                    placeholders.set(placeholder, match);
+                    placeholderIndex++;
+                    return placeholder;
+                });
+
+                processedToken = this.escapeHtml(processedToken);
+
+                placeholders.forEach((html, placeholder) => {
+                    processedToken = processedToken.replace(placeholder, html);
+                });
+
+                parts.push(processedToken);
             }
         }
 
