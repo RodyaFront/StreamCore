@@ -57,6 +57,13 @@ export const SocketIOService = {
             }
         });
 
+        // Транслируем события бросания предметов клиентам
+        eventBus.on('item:throw:requested', (data) => {
+            if (this.io) {
+                this.io.emit('item:throw:requested', data);
+            }
+        });
+
         // Транслируем обновления сообщений (обогащение информацией о подписке)
         eventBus.on('chat:message:enriched', (data) => {
             if (this.io) {

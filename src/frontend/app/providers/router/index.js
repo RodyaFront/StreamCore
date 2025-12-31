@@ -6,6 +6,7 @@ import DebugPage from '../../../pages/debug';
 import AlertsPage from '../../../pages/alerts';
 import ViewersCountPage from '../../../pages/viewers-count';
 import ChatPage from '../../../pages/chat';
+import ItemsThrowerPage from '../../../pages/items-thrower';
 
 const routes = [
     {
@@ -42,6 +43,11 @@ const routes = [
         path: '/chat',
         name: 'Chat',
         component: ChatPage
+    },
+    {
+        path: '/items-thrower',
+        name: 'ItemsThrower',
+        component: ItemsThrowerPage
     }
 ];
 

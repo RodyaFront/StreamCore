@@ -132,6 +132,16 @@ function isUserInfoReward(rewardTitle) {
 }
 
 /**
+ * Проверяет, является ли награда "Брось предмет в Тео"
+ * @param {string} rewardTitle - Название награды
+ * @returns {boolean}
+ */
+function isItemThrowReward(rewardTitle) {
+    const lowerTitle = rewardTitle.toLowerCase();
+    return lowerTitle.includes('брось предмет') || lowerTitle.includes('throw item');
+}
+
+/**
  * Парсит данные события награды
  * @param {Object} event - Событие от Twitch EventSub
  * @returns {Object} - Распарсенные данные
@@ -406,6 +416,12 @@ async function handleRedemptionEvent(event) {
 
         if (isShoutoutReward(rewardTitle)) {
             processShoutoutReward(username, userInput || '');
+        }
+
+        if (isItemThrowReward(rewardTitle)) {
+            const { getItemsThrowService } = await import('../items/ItemsThrowService.js');
+            const itemsThrowService = getItemsThrowService();
+            itemsThrowService.processItemThrow(redemptionData);
         }
     } catch (error) {
         logger.error('[REWARDS] Ошибка при сохранении награды в БД:', error.message, {

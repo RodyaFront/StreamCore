@@ -13,6 +13,14 @@ interface ChatMessageEnrichedEvent {
     isSubscriber: boolean;
 }
 
+interface ItemThrowEvent {
+    username: string;
+    rewardTitle: string;
+    rewardCost: number;
+    redemptionId: string;
+    timestamp: string;
+}
+
 interface SocketEventHandlers {
     onExpAdded?: (data: ExpAddedEvent) => void;
     onLevelUp?: (data: LevelUpEvent) => void;
@@ -21,6 +29,7 @@ interface SocketEventHandlers {
     onViewersUpdated?: (data: ViewersUpdatedEvent) => void;
     onChatMessage?: (data: ChatMessageEvent) => void;
     onChatMessageEnriched?: (data: ChatMessageEnrichedEvent) => void;
+    onItemThrow?: (data: ItemThrowEvent) => void;
     onConnect?: () => void;
     onDisconnect?: () => void;
     onError?: (error: Error) => void;
@@ -189,6 +198,26 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
                 onChatMessageEnrichedHandler(enrichedData);
             });
         }
+
+        if (handlers.onItemThrow) {
+            const onItemThrowHandler = handlers.onItemThrow;
+            socket.value.on('item:throw:requested', (data: unknown) => {
+                if (!data || typeof data !== 'object') {
+                    const errorMsg = 'Получены некорректные данные события item:throw:requested';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('item:throw:requested', data, errorMsg);
+                    return;
+                }
+                const itemThrowData = data as ItemThrowEvent;
+                if (!itemThrowData.username || !itemThrowData.rewardTitle || typeof itemThrowData.rewardCost !== 'number') {
+                    const errorMsg = 'Получены некорректные данные события item:throw:requested (отсутствует username, rewardTitle или rewardCost)';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('item:throw:requested', data, errorMsg);
+                    return;
+                }
+                onItemThrowHandler(itemThrowData);
+            });
+        }
     };
 
     const disconnect = (): void => {
@@ -207,6 +236,7 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
             socket.value.off('stream:viewers:updated');
             socket.value.off('chat:message');
             socket.value.off('chat:message:enriched');
+            socket.value.off('item:throw:requested');
             socket.value.disconnect();
             socket.value = null;
             isConnected.value = false;
