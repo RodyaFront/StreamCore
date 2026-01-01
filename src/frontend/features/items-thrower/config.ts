@@ -20,8 +20,23 @@ export const HITBOX_CONFIG = {
 
 export const ITEM_CONFIG = {
     RADIUS: 20,
+    RADIUS_VARIATION: 0.2,
     SPAWN_Y: 100,
     SPAWN_RANDOM_RANGE: 100,
+    RESTITUTION: 0.3,
+    ANGULAR_VELOCITY_MIN: -0.05,
+    ANGULAR_VELOCITY_MAX: 0.05,
+    INITIAL_VELOCITY_X_MIN: -2,
+    INITIAL_VELOCITY_X_MAX: 2,
+    INITIAL_VELOCITY_Y_MIN: 0,
+    INITIAL_VELOCITY_Y_MAX: 3,
+} as const;
+
+export const SPAWN_POINTS_CONFIG = {
+    STORAGE_KEY: 'items-thrower-spawn-points',
+    DEFAULT_POINTS: [
+        { id: 'spawn-1', position: { x: 400, y: 100 } },
+    ],
 } as const;
 
 export const SOUND_CONFIG = {

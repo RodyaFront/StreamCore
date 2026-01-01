@@ -18,3 +18,9 @@ export interface ItemDescriptor {
     img: string;
     sound: string;
 }
+
+export interface SpawnPoint {
+    id: string;
+    position: Point;
+}
+

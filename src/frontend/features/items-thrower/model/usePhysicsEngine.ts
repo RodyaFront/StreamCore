@@ -1,6 +1,6 @@
 import { onBeforeUnmount } from 'vue';
 import Matter from 'matter-js';
-import { PHYSICS_CONFIG, ITEM_CONFIG, ITEMS } from '../config';
+import { PHYSICS_CONFIG, ITEM_CONFIG, ITEMS, SOUND_CONFIG } from '../config';
 import { useSoundManager } from '../lib/useSoundManager';
 import type { HitboxModel, ItemDescriptor } from '../types';
 
@@ -21,7 +21,11 @@ function updateCanvasSize(canvas: HTMLCanvasElement): { width: number; height: n
     return { width, height };
 }
 
-export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel) {
+export function usePhysicsEngine(
+    canvas: HTMLCanvasElement,
+    hitbox: HitboxModel,
+    getRandomSpawnPoint: () => { position: { x: number; y: number } }
+) {
     const size = updateCanvasSize(canvas);
     const soundManager = useSoundManager();
 
@@ -58,9 +62,7 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
         {
             isStatic: true,
             render: {
-                fillStyle: '#ff0000',
-                strokeStyle: '#ff0000',
-                lineWidth: 2,
+                visible: false,
             },
             label: 'hitbox',
         }
@@ -69,7 +71,7 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
     Matter.World.add(engine.world, hitboxBody);
     console.log('[usePhysicsEngine] Hitbox body created:', {
         position: hitboxBody.position,
-        verticesCount: vertices.length,
+        verticesCount: verticesRelative.length,
         bodyId: hitboxBody.id,
     });
 
@@ -88,9 +90,7 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
             {
                 isStatic: true,
                 render: {
-                    fillStyle: '#ff0000',
-                    strokeStyle: '#ff0000',
-                    lineWidth: 2,
+                    visible: false,
                 },
                 label: 'hitbox',
             }
@@ -146,21 +146,37 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
 
     function spawnItem(item?: ItemDescriptor): void {
         const selectedItem = item || ITEMS[Math.floor(Math.random() * ITEMS.length)];
-        const centerX = hitbox.center.x;
+        const spawnPoint = getRandomSpawnPoint();
         const randomOffset = (Math.random() - 0.5) * ITEM_CONFIG.SPAWN_RANDOM_RANGE;
-        const spawnX = centerX + randomOffset;
-        const spawnY = ITEM_CONFIG.SPAWN_Y;
+        const spawnX = spawnPoint.position.x + randomOffset;
+        const spawnY = spawnPoint.position.y;
 
-        const body = Matter.Bodies.circle(spawnX, spawnY, ITEM_CONFIG.RADIUS, {
+        const radiusVariation = (Math.random() - 0.5) * ITEM_CONFIG.RADIUS_VARIATION;
+        const radius = ITEM_CONFIG.RADIUS * (1 + radiusVariation);
+        const scale = radius / ITEM_CONFIG.RADIUS;
+
+        const angularVelocity = ITEM_CONFIG.ANGULAR_VELOCITY_MIN +
+            Math.random() * (ITEM_CONFIG.ANGULAR_VELOCITY_MAX - ITEM_CONFIG.ANGULAR_VELOCITY_MIN);
+
+        const velocityX = ITEM_CONFIG.INITIAL_VELOCITY_X_MIN +
+            Math.random() * (ITEM_CONFIG.INITIAL_VELOCITY_X_MAX - ITEM_CONFIG.INITIAL_VELOCITY_X_MIN);
+        const velocityY = ITEM_CONFIG.INITIAL_VELOCITY_Y_MIN +
+            Math.random() * (ITEM_CONFIG.INITIAL_VELOCITY_Y_MAX - ITEM_CONFIG.INITIAL_VELOCITY_Y_MIN);
+
+        const body = Matter.Bodies.circle(spawnX, spawnY, radius, {
+            restitution: ITEM_CONFIG.RESTITUTION,
             render: {
                 sprite: {
                     texture: selectedItem.img,
-                    xScale: 1,
-                    yScale: 1,
+                    xScale: scale,
+                    yScale: scale,
                 },
             },
             label: 'item',
         });
+
+        Matter.Body.setAngularVelocity(body, angularVelocity);
+        Matter.Body.setVelocity(body, { x: velocityX, y: velocityY });
 
         (body as any)._itemSound = selectedItem.sound;
 
@@ -168,7 +184,9 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
 
         console.log('[usePhysicsEngine] Item spawned:', {
             position: { x: spawnX, y: spawnY },
-            radius: ITEM_CONFIG.RADIUS,
+            radius,
+            velocity: { x: velocityX, y: velocityY },
+            angularVelocity,
             bodyId: body.id,
             item: selectedItem,
         });

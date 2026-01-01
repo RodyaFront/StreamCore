@@ -7,15 +7,28 @@
             :editor-mode="editorMode"
             :canvas-width="canvasSize.width"
             :canvas-height="canvasSize.height"
+            :spawn-points="spawnPointsModel.spawnPoints.value"
             @hitbox-move="handleHitboxMove"
             @hitbox-vertex-move="handleHitboxVertexMove"
+            @hitbox-add-vertex="handleHitboxAddVertex"
+            @hitbox-remove-vertex="handleHitboxRemoveVertex"
+            @spawn-point-move="handleSpawnPointMove"
+            @spawn-point-add="handleSpawnPointAdd"
+            @spawn-point-remove="handleSpawnPointRemove"
         />
         <button
-            v-if="physicsEngine"
+            v-if="physicsEngine && editorMode"
             class="test-spawn-button"
             @click="handleSpawnTest"
         >
             Spawn Item (Test)
+        </button>
+        <button
+            v-if="physicsEngine && editorMode"
+            class="toggle-editor-button"
+            @click="toggleEditorMode"
+        >
+            Hide Editor
         </button>
     </div>
 </template>
@@ -24,10 +37,12 @@
 import { ref, onMounted, nextTick, computed } from 'vue';
 import { usePhysicsEngine } from '../model/usePhysicsEngine';
 import { useHitboxModel } from '../model/useHitboxModel';
+import { useSpawnPointsModel } from '../model/useSpawnPointsModel';
 import HitboxVisualization from './HitboxVisualization.vue';
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const hitboxModel = useHitboxModel();
+const spawnPointsModel = useSpawnPointsModel();
 const editorMode = ref(true);
 const physicsEngine = ref<ReturnType<typeof usePhysicsEngine> | null>(null);
 
@@ -46,6 +61,10 @@ function handleSpawnTest(): void {
     if (physicsEngine.value) {
         physicsEngine.value.spawnItem();
     }
+}
+
+function toggleEditorMode(): void {
+    editorMode.value = !editorMode.value;
 }
 
 function handleHitboxMove(newCenter: { x: number; y: number }): void {
@@ -96,6 +115,57 @@ function calculateCenter(vertices: { x: number; y: number }[]): { x: number; y: 
     };
 }
 
+function handleHitboxAddVertex(vertexIndex: number, newPosition: { x: number; y: number }): void {
+    const currentHitbox = hitboxModel.hitbox.value;
+    const newVertices = [...currentHitbox.vertices];
+    newVertices.splice(vertexIndex, 0, newPosition);
+
+    const newCenter = calculateCenter(newVertices);
+
+    hitboxModel.updateHitbox({
+        center: newCenter,
+        vertices: newVertices,
+    });
+
+    if (physicsEngine.value) {
+        physicsEngine.value.updateHitboxPosition(newCenter, newVertices);
+    }
+}
+
+function handleHitboxRemoveVertex(vertexIndex: number): void {
+    const currentHitbox = hitboxModel.hitbox.value;
+    if (currentHitbox.vertices.length <= 3) {
+        console.warn('[ItemsThrowerOverlay] Cannot remove vertex: minimum 3 vertices required');
+        return;
+    }
+
+    const newVertices = [...currentHitbox.vertices];
+    newVertices.splice(vertexIndex, 1);
+
+    const newCenter = calculateCenter(newVertices);
+
+    hitboxModel.updateHitbox({
+        center: newCenter,
+        vertices: newVertices,
+    });
+
+    if (physicsEngine.value) {
+        physicsEngine.value.updateHitboxPosition(newCenter, newVertices);
+    }
+}
+
+function handleSpawnPointMove(pointId: string, newPosition: { x: number; y: number }): void {
+    spawnPointsModel.updateSpawnPoint(pointId, newPosition);
+}
+
+function handleSpawnPointAdd(position: { x: number; y: number }): void {
+    spawnPointsModel.addSpawnPoint(position);
+}
+
+function handleSpawnPointRemove(pointId: string): void {
+    spawnPointsModel.removeSpawnPoint(pointId);
+}
+
 onMounted(async () => {
     await nextTick();
 
@@ -105,7 +175,11 @@ onMounted(async () => {
     }
 
     console.log('[ItemsThrowerOverlay] Mounted, initializing physics engine');
-    physicsEngine.value = usePhysicsEngine(canvasRef.value, hitboxModel.hitbox.value);
+    physicsEngine.value = usePhysicsEngine(
+        canvasRef.value,
+        hitboxModel.hitbox.value,
+        () => spawnPointsModel.getRandomSpawnPoint()
+    );
 });
 </script>
 
@@ -146,5 +220,24 @@ canvas {
 
 .test-spawn-button:hover {
     background: #0056b3;
+}
+
+.toggle-editor-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    padding: 10px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    pointer-events: auto;
+    font-size: 14px;
+}
+
+.toggle-editor-button:hover {
+    background: #218838;
 }
 </style>
