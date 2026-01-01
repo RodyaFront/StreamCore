@@ -1,8 +1,8 @@
 import { onBeforeUnmount } from 'vue';
 import Matter from 'matter-js';
-import { PHYSICS_CONFIG, ITEM_CONFIG, SOUND_CONFIG } from '../config';
+import { PHYSICS_CONFIG, ITEM_CONFIG, ITEMS } from '../config';
 import { useSoundManager } from '../lib/useSoundManager';
-import type { HitboxModel } from '../types';
+import type { HitboxModel, ItemDescriptor } from '../types';
 
 function updateCanvasSize(canvas: HTMLCanvasElement): { width: number; height: number } {
     const rect = canvas.getBoundingClientRect();
@@ -84,10 +84,13 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
 
             if ((isHitboxA && isItemB) || (isHitboxB && isItemA)) {
                 const itemBody = isItemA ? bodyA : bodyB;
+                const itemSound = (itemBody as any)._itemSound as string | undefined;
 
                 if (!(itemBody as any)._hitPlayed) {
                     (itemBody as any)._hitPlayed = true;
-                    soundManager.play(SOUND_CONFIG.COLLISION, SOUND_CONFIG.VOLUME);
+                    if (itemSound) {
+                        soundManager.play(itemSound, SOUND_CONFIG.VOLUME);
+                    }
                     console.log('[usePhysicsEngine] Collision detected:', {
                         itemId: itemBody.id,
                         itemPosition: { x: itemBody.position.x, y: itemBody.position.y },
@@ -105,7 +108,8 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
 
     console.log('[usePhysicsEngine] Engine started');
 
-    function spawnItem(): void {
+    function spawnItem(item?: ItemDescriptor): void {
+        const selectedItem = item || ITEMS[Math.floor(Math.random() * ITEMS.length)];
         const centerX = hitbox.center.x;
         const randomOffset = (Math.random() - 0.5) * ITEM_CONFIG.SPAWN_RANDOM_RANGE;
         const spawnX = centerX + randomOffset;
@@ -113,12 +117,16 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
 
         const body = Matter.Bodies.circle(spawnX, spawnY, ITEM_CONFIG.RADIUS, {
             render: {
-                fillStyle: '#ff0000',
-                strokeStyle: '#000000',
-                lineWidth: 2,
+                sprite: {
+                    texture: selectedItem.img,
+                    xScale: 1,
+                    yScale: 1,
+                },
             },
             label: 'item',
         });
+
+        (body as any)._itemSound = selectedItem.sound;
 
         Matter.World.add(engine.world, body);
 
@@ -126,6 +134,7 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
             position: { x: spawnX, y: spawnY },
             radius: ITEM_CONFIG.RADIUS,
             bodyId: body.id,
+            item: selectedItem,
         });
     }
 

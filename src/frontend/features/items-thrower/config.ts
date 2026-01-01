@@ -1,4 +1,7 @@
 import collisionSound from '@shared/assets/sounds/hit/squeek.mp3';
+import catImage from '@shared/assets/images/cat.png';
+import redShoeImage from '@shared/assets/images/redShoe.png';
+import type { ItemDescriptor } from './types';
 
 export const PHYSICS_CONFIG = {
     GRAVITY_Y: 1.2,
@@ -22,6 +25,16 @@ export const ITEM_CONFIG = {
 } as const;
 
 export const SOUND_CONFIG = {
-    COLLISION: collisionSound,
     VOLUME: 0.3,
 } as const;
+
+export const ITEMS: ItemDescriptor[] = [
+    {
+        img: catImage,
+        sound: collisionSound,
+    },
+    {
+        img: redShoeImage,
+        sound: collisionSound,
+    },
+];

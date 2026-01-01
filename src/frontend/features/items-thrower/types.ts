@@ -13,3 +13,8 @@ export interface HitboxModel {
     center: Point;
     vertices: Point[];
 }
+
+export interface ItemDescriptor {
+    img: string;
+    sound: string;
+}
