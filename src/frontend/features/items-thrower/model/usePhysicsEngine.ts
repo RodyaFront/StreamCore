@@ -21,10 +21,35 @@ function updateCanvasSize(canvas: HTMLCanvasElement): { width: number; height: n
     return { width, height };
 }
 
+const imageSizeCache = new Map<string, { width: number; height: number }>();
+
+function getImageSize(imgSrc: string): Promise<{ width: number; height: number }> {
+    if (imageSizeCache.has(imgSrc)) {
+        return Promise.resolve(imageSizeCache.get(imgSrc)!);
+    }
+
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const size = { width: img.naturalWidth, height: img.naturalHeight };
+            imageSizeCache.set(imgSrc, size);
+            resolve(size);
+        };
+        img.onerror = () => {
+            const defaultSize = { width: ITEM_CONFIG.MAX_SIZE, height: ITEM_CONFIG.MAX_SIZE };
+            imageSizeCache.set(imgSrc, defaultSize);
+            resolve(defaultSize);
+        };
+        img.src = imgSrc;
+    });
+}
+
 export function usePhysicsEngine(
     canvas: HTMLCanvasElement,
     hitbox: HitboxModel,
-    getRandomSpawnPoint: () => { position: { x: number; y: number } }
+    getRandomSpawnPoint: () => { position: { x: number; y: number } },
+    applyDamage: (damage: number) => void,
+    onDamagePopup?: (x: number, y: number, damage: number) => void
 ) {
     const size = updateCanvasSize(canvas);
     const soundManager = useSoundManager();
@@ -121,15 +146,28 @@ export function usePhysicsEngine(
             if ((isHitboxA && isItemB) || (isHitboxB && isItemA)) {
                 const itemBody = isItemA ? bodyA : bodyB;
                 const itemSound = (itemBody as any)._itemSound as string | undefined;
+                const itemDamage = (itemBody as any)._itemDamage as number | undefined;
 
                 if (!(itemBody as any)._hitPlayed) {
                     (itemBody as any)._hitPlayed = true;
                     if (itemSound) {
                         soundManager.play(itemSound, SOUND_CONFIG.VOLUME);
                     }
+                    if (itemDamage !== undefined) {
+                        applyDamage(itemDamage);
+
+                        const collisionPoint = pair.collision?.supports?.[0];
+                        const popupX = collisionPoint?.x ?? itemBody.position.x;
+                        const popupY = collisionPoint?.y ?? itemBody.position.y;
+
+                        if (onDamagePopup) {
+                            onDamagePopup(popupX, popupY, itemDamage);
+                        }
+                    }
                     console.log('[usePhysicsEngine] Collision detected:', {
                         itemId: itemBody.id,
                         itemPosition: { x: itemBody.position.x, y: itemBody.position.y },
+                        damage: itemDamage,
                         collisionPoint: pair.collision?.supports?.[0] || null,
                     });
                 }
@@ -144,7 +182,7 @@ export function usePhysicsEngine(
 
     console.log('[usePhysicsEngine] Engine started');
 
-    function spawnItem(item?: ItemDescriptor): void {
+    async function spawnItem(item?: ItemDescriptor): Promise<void> {
         const selectedItem = item || ITEMS[Math.floor(Math.random() * ITEMS.length)];
         const spawnPoint = getRandomSpawnPoint();
         const randomOffset = (Math.random() - 0.5) * ITEM_CONFIG.SPAWN_RANDOM_RANGE;
@@ -152,40 +190,57 @@ export function usePhysicsEngine(
         const spawnY = spawnPoint.position.y;
 
         const radiusVariation = (Math.random() - 0.5) * ITEM_CONFIG.RADIUS_VARIATION;
-        const radius = ITEM_CONFIG.RADIUS * (1 + radiusVariation);
-        const scale = radius / ITEM_CONFIG.RADIUS;
+        let radius = ITEM_CONFIG.RADIUS * (1 + radiusVariation);
+
+        const maxRadius = ITEM_CONFIG.MAX_SIZE / 2;
+        if (radius > maxRadius) {
+            radius = maxRadius;
+        }
+
+        const imageSize = await getImageSize(selectedItem.img);
+        const maxImageDimension = Math.max(imageSize.width, imageSize.height);
+        const spriteScale = ITEM_CONFIG.MAX_SIZE / maxImageDimension;
 
         const angularVelocity = ITEM_CONFIG.ANGULAR_VELOCITY_MIN +
             Math.random() * (ITEM_CONFIG.ANGULAR_VELOCITY_MAX - ITEM_CONFIG.ANGULAR_VELOCITY_MIN);
 
-        const velocityX = ITEM_CONFIG.INITIAL_VELOCITY_X_MIN +
-            Math.random() * (ITEM_CONFIG.INITIAL_VELOCITY_X_MAX - ITEM_CONFIG.INITIAL_VELOCITY_X_MIN);
-        const velocityY = ITEM_CONFIG.INITIAL_VELOCITY_Y_MIN +
-            Math.random() * (ITEM_CONFIG.INITIAL_VELOCITY_Y_MAX - ITEM_CONFIG.INITIAL_VELOCITY_Y_MIN);
+        const dx = hitbox.center.x - spawnX;
+        const dy = hitbox.center.y - spawnY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const directionX = dx / distance;
+        const directionY = dy / distance;
+
+        const speedVariation = (Math.random() - 0.5) * ITEM_CONFIG.INITIAL_SPEED_VARIATION;
+        const speed = ITEM_CONFIG.INITIAL_SPEED + speedVariation;
 
         const body = Matter.Bodies.circle(spawnX, spawnY, radius, {
             restitution: ITEM_CONFIG.RESTITUTION,
             render: {
                 sprite: {
                     texture: selectedItem.img,
-                    xScale: scale,
-                    yScale: scale,
+                    xScale: spriteScale,
+                    yScale: spriteScale,
                 },
             },
             label: 'item',
         });
 
         Matter.Body.setAngularVelocity(body, angularVelocity);
-        Matter.Body.setVelocity(body, { x: velocityX, y: velocityY });
+        Matter.Body.setVelocity(body, {
+            x: directionX * speed,
+            y: directionY * speed,
+        });
 
         (body as any)._itemSound = selectedItem.sound;
+        (body as any)._itemDamage = selectedItem.damage;
 
         Matter.World.add(engine.world, body);
 
         console.log('[usePhysicsEngine] Item spawned:', {
             position: { x: spawnX, y: spawnY },
             radius,
-            velocity: { x: velocityX, y: velocityY },
+            direction: { x: directionX, y: directionY },
+            speed,
             angularVelocity,
             bodyId: body.id,
             item: selectedItem,

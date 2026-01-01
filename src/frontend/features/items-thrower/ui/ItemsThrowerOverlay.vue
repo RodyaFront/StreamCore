@@ -16,6 +16,18 @@
             @spawn-point-add="handleSpawnPointAdd"
             @spawn-point-remove="handleSpawnPointRemove"
         />
+        <div
+            v-for="popup in damagePopups.popups.value"
+            :key="popup.id"
+            class="damage-popup"
+            :class="{ 'damage-heal': popup.damage < 0 }"
+            :style="{
+                left: `${popup.x}px`,
+                top: `${popup.y}px`,
+            }"
+        >
+            {{ popup.damage > 0 ? '-' : '+' }}{{ Math.abs(popup.damage) }}
+        </div>
         <button
             v-if="physicsEngine && editorMode"
             class="test-spawn-button"
@@ -38,11 +50,13 @@ import { ref, onMounted, nextTick, computed } from 'vue';
 import { usePhysicsEngine } from '../model/usePhysicsEngine';
 import { useHitboxModel } from '../model/useHitboxModel';
 import { useSpawnPointsModel } from '../model/useSpawnPointsModel';
+import { useDamagePopups } from '../lib/useDamagePopups';
 import HitboxVisualization from './HitboxVisualization.vue';
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const hitboxModel = useHitboxModel();
 const spawnPointsModel = useSpawnPointsModel();
+const damagePopups = useDamagePopups();
 const editorMode = ref(true);
 const physicsEngine = ref<ReturnType<typeof usePhysicsEngine> | null>(null);
 
@@ -80,6 +94,7 @@ function handleHitboxMove(newCenter: { x: number; y: number }): void {
     hitboxModel.updateHitbox({
         center: newCenter,
         vertices: newVertices,
+        hp: currentHitbox.hp,
     });
 
     if (physicsEngine.value) {
@@ -97,6 +112,7 @@ function handleHitboxVertexMove(vertexIndex: number, newPosition: { x: number; y
     hitboxModel.updateHitbox({
         center: newCenter,
         vertices: newVertices,
+        hp: currentHitbox.hp,
     });
 
     if (physicsEngine.value) {
@@ -125,6 +141,7 @@ function handleHitboxAddVertex(vertexIndex: number, newPosition: { x: number; y:
     hitboxModel.updateHitbox({
         center: newCenter,
         vertices: newVertices,
+        hp: currentHitbox.hp,
     });
 
     if (physicsEngine.value) {
@@ -147,6 +164,7 @@ function handleHitboxRemoveVertex(vertexIndex: number): void {
     hitboxModel.updateHitbox({
         center: newCenter,
         vertices: newVertices,
+        hp: currentHitbox.hp,
     });
 
     if (physicsEngine.value) {
@@ -178,7 +196,16 @@ onMounted(async () => {
     physicsEngine.value = usePhysicsEngine(
         canvasRef.value,
         hitboxModel.hitbox.value,
-        () => spawnPointsModel.getRandomSpawnPoint()
+        () => spawnPointsModel.getRandomSpawnPoint(),
+        (damage: number) => hitboxModel.applyDamage(damage),
+        (x: number, y: number, damage: number) => {
+            if (canvasRef.value) {
+                const rect = canvasRef.value.getBoundingClientRect();
+                const screenX = rect.left + x;
+                const screenY = rect.top + y;
+                damagePopups.addDamagePopup(screenX, screenY, damage);
+            }
+        }
     );
 });
 </script>
@@ -239,5 +266,33 @@ canvas {
 
 .toggle-editor-button:hover {
     background: #218838;
+}
+
+.damage-popup {
+    position: absolute;
+    pointer-events: none;
+    z-index: 100;
+    font-size: 24px;
+    font-weight: bold;
+    color: #ff0000;
+    text-shadow: 2px 2px 14px 24px rgba(0, 0, 0, 0.2);
+    transform: translate(-50%, -50%);
+    animation: damageFloat 2s ease-out forwards;
+    user-select: none;
+}
+
+.damage-popup.damage-heal {
+    color: #00ff00;
+}
+
+@keyframes damageFloat {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) translateY(-80px);
+    }
 }
 </style>

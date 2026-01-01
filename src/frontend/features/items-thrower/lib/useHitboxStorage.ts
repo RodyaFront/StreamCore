@@ -37,6 +37,7 @@ export function useHitboxStorage() {
         return {
             center: { ...HITBOX_CONFIG.DEFAULT_CENTER },
             vertices: HITBOX_CONFIG.DEFAULT_VERTICES.map(v => ({ ...v })),
+            hp: HITBOX_CONFIG.DEFAULT_HP,
         };
     }
 
