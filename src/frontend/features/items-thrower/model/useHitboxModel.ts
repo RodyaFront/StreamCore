@@ -32,6 +32,12 @@ export function useHitboxModel() {
         updateHitbox({ ...defaultHitbox, hp: HITBOX_CONFIG.DEFAULT_HP });
     }
 
+    function restoreFullHp(): void {
+        hitbox.value = { ...hitbox.value, hp: HITBOX_CONFIG.DEFAULT_HP };
+        storage.saveHitbox(hitbox.value);
+        console.log('[useHitboxModel] Full HP restored:', hitbox.value.hp);
+    }
+
     return {
         hitbox: computed(() => hitbox.value),
         center,
@@ -40,5 +46,6 @@ export function useHitboxModel() {
         updateHitbox,
         applyDamage,
         resetHitbox,
+        restoreFullHp,
     };
 }

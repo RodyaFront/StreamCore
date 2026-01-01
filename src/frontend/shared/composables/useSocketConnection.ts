@@ -19,6 +19,7 @@ interface ItemThrowEvent {
     rewardCost: number;
     redemptionId: string;
     timestamp: string;
+    count?: number;
 }
 
 interface SocketEventHandlers {
@@ -211,6 +212,12 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
                 const itemThrowData = data as ItemThrowEvent;
                 if (!itemThrowData.username || !itemThrowData.rewardTitle || typeof itemThrowData.rewardCost !== 'number') {
                     const errorMsg = 'Получены некорректные данные события item:throw:requested (отсутствует username, rewardTitle или rewardCost)';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('item:throw:requested', data, errorMsg);
+                    return;
+                }
+                if (itemThrowData.count !== undefined && (typeof itemThrowData.count !== 'number' || itemThrowData.count < 1)) {
+                    const errorMsg = 'Получены некорректные данные события item:throw:requested (count должен быть положительным числом)';
                     console.error('[Socket]', errorMsg, data);
                     handlers.onValidationError?.('item:throw:requested', data, errorMsg);
                     return;

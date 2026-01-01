@@ -35,6 +35,39 @@ class ItemsThrowService {
             `username: ${username}, reward: ${rewardTitle}, cost: ${rewardCost}, redemptionId: ${redemptionId}`
         );
     }
+
+    /**
+     * Обрабатывает волну из 100 предметов
+     * @param {Object} redemptionData - Данные награды
+     * @param {string} redemptionData.username - Имя пользователя
+     * @param {string} redemptionData.rewardTitle - Название награды
+     * @param {number} redemptionData.rewardCost - Стоимость награды
+     * @param {string} redemptionData.redemptionId - ID активации награды
+     */
+    processWaveOfItems(redemptionData) {
+        const { username, rewardTitle, rewardCost, redemptionId } = redemptionData;
+
+        logger.info(
+            '[ITEMS_THROW] Обработка волны предметов',
+            `username: ${username}, reward: ${rewardTitle}, cost: ${rewardCost}, count: 100`
+        );
+
+        const itemThrowData = {
+            username,
+            rewardTitle,
+            rewardCost,
+            redemptionId,
+            count: 100,
+            timestamp: new Date().toISOString()
+        };
+
+        eventBus.emit('item:throw:requested', itemThrowData);
+
+        logger.info(
+            '[ITEMS_THROW] Событие волны предметов отправлено',
+            `username: ${username}, reward: ${rewardTitle}, count: 100`
+        );
+    }
 }
 
 let instance = null;

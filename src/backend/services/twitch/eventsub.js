@@ -142,6 +142,18 @@ function isItemThrowReward(rewardTitle) {
 }
 
 /**
+ * Проверяет, является ли награда "ВОЛНА РАНДОМНОЙ ФИГНИ"
+ * @param {string} rewardTitle - Название награды
+ * @returns {boolean}
+ */
+function isWaveOfRandomItemsReward(rewardTitle) {
+    const lowerTitle = rewardTitle.toLowerCase();
+    return lowerTitle.includes('волна') &&
+           (lowerTitle.includes('рандом') || lowerTitle.includes('random')) &&
+           (lowerTitle.includes('фигн') || lowerTitle.includes('item'));
+}
+
+/**
  * Парсит данные события награды
  * @param {Object} event - Событие от Twitch EventSub
  * @returns {Object} - Распарсенные данные
@@ -422,6 +434,12 @@ async function handleRedemptionEvent(event) {
             const { getItemsThrowService } = await import('../items/ItemsThrowService.js');
             const itemsThrowService = getItemsThrowService();
             itemsThrowService.processItemThrow(redemptionData);
+        }
+
+        if (isWaveOfRandomItemsReward(rewardTitle)) {
+            const { getItemsThrowService } = await import('../items/ItemsThrowService.js');
+            const itemsThrowService = getItemsThrowService();
+            itemsThrowService.processWaveOfItems(redemptionData);
         }
     } catch (error) {
         logger.error('[REWARDS] Ошибка при сохранении награды в БД:', error.message, {

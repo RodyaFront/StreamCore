@@ -17,6 +17,7 @@
             @spawn-point-remove="handleSpawnPointRemove"
         />
         <div
+            v-if="hpSystemEnabled"
             v-for="popup in damagePopups.popups.value"
             :key="popup.id"
             class="damage-popup"
@@ -35,6 +36,31 @@
         >
             Spawn Item (Test)
         </button>
+        <div
+            v-if="hpSystemEnabled"
+            v-show="hpBarState.isVisible.value"
+            ref="hpBarContainerRef"
+            class="hp-bar-container"
+            :style="{
+                left: `${hitboxScreenPosition.x}px`,
+                top: `${hitboxScreenPosition.y - 60}px`,
+            }"
+        >
+            <div class="hp-bar-wrapper">
+                <div
+                    ref="hpBarFillRef"
+                    class="hp-bar-fill"
+                    :style="{ width: `${hpBarState.initialHp.value}%` }"
+                />
+            </div>
+        </div>
+        <button
+            v-if="editorMode"
+            class="toggle-hp-system-button"
+            @click="toggleHpSystem"
+        >
+            {{ hpSystemEnabled ? 'Disable' : 'Enable' }} HP System
+        </button>
         <button
             v-if="physicsEngine && editorMode"
             class="toggle-editor-button"
@@ -42,11 +68,19 @@
         >
             Hide Editor
         </button>
+        <button
+            v-if="editorMode"
+            class="restore-hp-button"
+            @click="handleRestoreHp"
+        >
+            Restore Full HP
+        </button>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed } from 'vue';
+import { ref, onMounted, nextTick, computed, watch } from 'vue';
+import { gsap } from 'gsap';
 import { usePhysicsEngine } from '../model/usePhysicsEngine';
 import { useHitboxModel } from '../model/useHitboxModel';
 import { useSpawnPointsModel } from '../model/useSpawnPointsModel';
@@ -60,6 +94,21 @@ const damagePopups = useDamagePopups();
 const editorMode = ref(true);
 const physicsEngine = ref<ReturnType<typeof usePhysicsEngine> | null>(null);
 
+const hpBarContainerRef = ref<HTMLElement | null>(null);
+const hpBarFillRef = ref<HTMLElement | null>(null);
+
+const HP_SYSTEM_STORAGE_KEY = 'items-thrower-hp-system-enabled';
+const storedHpSystem = localStorage.getItem(HP_SYSTEM_STORAGE_KEY);
+const hpSystemEnabled = ref<boolean>(storedHpSystem !== null ? storedHpSystem === 'true' : true);
+
+const hpBarState = {
+    isVisible: ref(false),
+    initialHp: ref(0),
+    animationTimeline: null as gsap.core.Timeline | null,
+    debounceTimer: null as ReturnType<typeof setTimeout> | null,
+    finalHp: 0,
+};
+
 const canvasSize = computed(() => {
     if (!canvasRef.value) {
         return { width: 0, height: 0 };
@@ -71,14 +120,147 @@ const canvasSize = computed(() => {
     };
 });
 
+const hitboxScreenPosition = computed(() => {
+    if (!canvasRef.value) {
+        return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    }
+    const rect = canvasRef.value.getBoundingClientRect();
+    const center = hitboxModel.center.value;
+    const vertices = hitboxModel.vertices.value;
+
+    let minY = center.y;
+    if (vertices.length > 0) {
+        minY = Math.min(...vertices.map(v => v.y));
+    }
+
+    return {
+        x: rect.left + center.x,
+        y: rect.top + minY - 40,
+    };
+});
+
+watch(hitboxModel.hp, (newHp, oldHp) => {
+    if (oldHp !== undefined && newHp < oldHp && hpSystemEnabled.value) {
+        if (hpBarState.debounceTimer === null) {
+            hpBarState.initialHp.value = oldHp;
+        }
+        hpBarState.finalHp = newHp;
+        triggerHpBarAnimationDebounced();
+    }
+});
+
+function toggleHpSystem(): void {
+    hpSystemEnabled.value = !hpSystemEnabled.value;
+    localStorage.setItem(HP_SYSTEM_STORAGE_KEY, String(hpSystemEnabled.value));
+
+    if (!hpSystemEnabled.value) {
+        hpBarState.isVisible.value = false;
+        if (hpBarState.animationTimeline) {
+            hpBarState.animationTimeline.kill();
+            hpBarState.animationTimeline = null;
+        }
+    }
+}
+
+function triggerHpBarAnimationDebounced(): void {
+    if (hpBarState.debounceTimer) {
+        clearTimeout(hpBarState.debounceTimer);
+    }
+
+    hpBarState.debounceTimer = setTimeout(() => {
+        triggerHpBarAnimation(hpBarState.initialHp.value, hpBarState.finalHp);
+        hpBarState.debounceTimer = null;
+        hpBarState.initialHp.value = 0;
+        hpBarState.finalHp = 0;
+    }, 100);
+}
+
+async function triggerHpBarAnimation(initialHp: number, finalHp: number): Promise<void> {
+    if (hpBarState.animationTimeline) {
+        hpBarState.animationTimeline.kill();
+    }
+
+    hpBarState.isVisible.value = true;
+
+    await nextTick();
+
+    if (!hpBarFillRef.value || !hpBarContainerRef.value) {
+        hpBarState.isVisible.value = false;
+        return;
+    }
+
+    hpBarState.animationTimeline = gsap.timeline();
+
+    hpBarState.animationTimeline
+        .set(hpBarContainerRef.value, { opacity: 0, x: 0 })
+        .set(hpBarFillRef.value, { width: `${initialHp}%` })
+        .to(hpBarContainerRef.value, {
+            opacity: 1,
+            duration: 0.3,
+            ease: 'power2.out',
+        })
+        .to(hpBarFillRef.value, {
+            width: `${finalHp}%`,
+            duration: 0.5,
+            ease: 'power2.out',
+        }, '-=0.2')
+        .to(hpBarContainerRef.value, {
+            x: -4,
+            duration: 0.05,
+            repeat: 10,
+            yoyo: true,
+            ease: 'power1.inOut',
+        }, '-=0.5')
+        .to(hpBarContainerRef.value, {
+            opacity: 0,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: () => {
+                hpBarState.isVisible.value = false;
+                hpBarState.animationTimeline = null;
+            },
+        }, '+=0.4')
+        .set(hpBarContainerRef.value, { x: 0 });
+}
+
+
 function handleSpawnTest(): void {
     if (physicsEngine.value) {
         physicsEngine.value.spawnItem();
     }
 }
 
+function spawnItemFromReward(rewardData: { username: string; rewardTitle: string; rewardCost: number }): void {
+    if (physicsEngine.value) {
+        physicsEngine.value.spawnItem();
+    }
+}
+
+function spawnWaveOfItems(rewardData: { username: string; rewardTitle: string; rewardCost: number }, count: number): void {
+    if (!physicsEngine.value) {
+        return;
+    }
+
+    for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+            if (physicsEngine.value) {
+                physicsEngine.value.spawnItem();
+            }
+        }, i * 50);
+    }
+}
+
+defineExpose({
+    spawnItemFromReward,
+    spawnWaveOfItems,
+});
+
 function toggleEditorMode(): void {
     editorMode.value = !editorMode.value;
+}
+
+function handleRestoreHp(): void {
+    hitboxModel.restoreFullHp();
 }
 
 function handleHitboxMove(newCenter: { x: number; y: number }): void {
@@ -268,6 +450,65 @@ canvas {
     background: #218838;
 }
 
+.restore-hp-button {
+    position: absolute;
+    top: 110px;
+    left: 20px;
+    z-index: 10;
+    padding: 10px 20px;
+    background: #4ecdc4;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    pointer-events: auto;
+    font-size: 14px;
+}
+
+.restore-hp-button:hover {
+    background: #3db8b0;
+}
+
+.toggle-hp-system-button {
+    position: absolute;
+    top: 150px;
+    left: 20px;
+    z-index: 10;
+    padding: 10px 20px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    pointer-events: auto;
+    font-size: 14px;
+}
+
+.toggle-hp-system-button:hover {
+    background: #5a6268;
+}
+
+.hp-bar-container {
+    position: fixed;
+    transform: translateX(-50%);
+    z-index: 1000;
+    pointer-events: none;
+    min-width: 200px;
+}
+
+.hp-bar-wrapper {
+    height: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    position: relative;
+}
+
+.hp-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: rgb(231, 71, 71);
+}
+
 .damage-popup {
     position: absolute;
     pointer-events: none;
@@ -295,4 +536,5 @@ canvas {
         transform: translate(-50%, -50%) translateY(-80px);
     }
 }
+
 </style>
