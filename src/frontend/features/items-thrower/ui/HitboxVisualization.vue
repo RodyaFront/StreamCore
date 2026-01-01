@@ -20,6 +20,7 @@
             stroke-width="2"
             class="hitbox-polygon"
             @mousedown="handlePolygonMouseDown"
+            @click.stop
         />
         <circle
             :cx="center.x"
@@ -245,10 +246,6 @@ function handlePolygonMouseDown(event: MouseEvent): void {
         emit('hitboxAddVertex', newVertexIndex, closestSegment.closestPoint);
         event.preventDefault();
         event.stopPropagation();
-    } else {
-        emit('spawnPointAdd', point);
-        event.preventDefault();
-        event.stopPropagation();
     }
 }
 
@@ -375,6 +372,21 @@ function handleMouseLeave(): void {
     }
 }
 
+function isPointInsidePolygon(point: Point, vertices: Point[]): boolean {
+    let inside = false;
+    for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+        const xi = vertices[i].x;
+        const yi = vertices[i].y;
+        const xj = vertices[j].x;
+        const yj = vertices[j].y;
+
+        const intersect = ((yi > point.y) !== (yj > point.y)) &&
+            (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
 function handleContextMenu(event: MouseEvent): void {
     if (isDragging.value || draggingVertexIndex.value !== null || draggingSpawnPointId.value !== null) {
         return;
@@ -399,6 +411,10 @@ function handleContextMenu(event: MouseEvent): void {
         if (distance <= 15) {
             return;
         }
+    }
+
+    if (isPointInsidePolygon(point, verticesList)) {
+        return;
     }
 
     const spawnPointsList = spawnPoints.value;
