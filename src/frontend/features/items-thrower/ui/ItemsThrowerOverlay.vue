@@ -7,6 +7,8 @@
             :editor-mode="editorMode"
             :canvas-width="canvasSize.width"
             :canvas-height="canvasSize.height"
+            @hitbox-move="handleHitboxMove"
+            @hitbox-vertex-move="handleHitboxVertexMove"
         />
         <button
             v-if="physicsEngine"
@@ -46,6 +48,54 @@ function handleSpawnTest(): void {
     }
 }
 
+function handleHitboxMove(newCenter: { x: number; y: number }): void {
+    const currentHitbox = hitboxModel.hitbox.value;
+    const deltaX = newCenter.x - currentHitbox.center.x;
+    const deltaY = newCenter.y - currentHitbox.center.y;
+
+    const newVertices = currentHitbox.vertices.map(v => ({
+        x: v.x + deltaX,
+        y: v.y + deltaY,
+    }));
+
+    hitboxModel.updateHitbox({
+        center: newCenter,
+        vertices: newVertices,
+    });
+
+    if (physicsEngine.value) {
+        physicsEngine.value.updateHitboxPosition(newCenter, newVertices);
+    }
+}
+
+function handleHitboxVertexMove(vertexIndex: number, newPosition: { x: number; y: number }): void {
+    const currentHitbox = hitboxModel.hitbox.value;
+    const newVertices = [...currentHitbox.vertices];
+    newVertices[vertexIndex] = newPosition;
+
+    const newCenter = calculateCenter(newVertices);
+
+    hitboxModel.updateHitbox({
+        center: newCenter,
+        vertices: newVertices,
+    });
+
+    if (physicsEngine.value) {
+        physicsEngine.value.updateHitboxPosition(newCenter, newVertices);
+    }
+}
+
+function calculateCenter(vertices: { x: number; y: number }[]): { x: number; y: number } {
+    const sum = vertices.reduce(
+        (acc, v) => ({ x: acc.x + v.x, y: acc.y + v.y }),
+        { x: 0, y: 0 }
+    );
+    return {
+        x: sum.x / vertices.length,
+        y: sum.y / vertices.length,
+    };
+}
+
 onMounted(async () => {
     await nextTick();
 
@@ -64,6 +114,10 @@ onMounted(async () => {
     position: fixed;
     inset: 0;
     pointer-events: none;
+}
+
+.overlay-root > * {
+    pointer-events: auto;
 }
 
 canvas {

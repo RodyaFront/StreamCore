@@ -47,11 +47,14 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
         },
     });
 
-    const vertices = hitbox.vertices.map(v => ({ x: v.x, y: v.y }));
-    const hitboxBody = Matter.Bodies.fromVertices(
+    const verticesRelative = hitbox.vertices.map(v => ({
+        x: v.x - hitbox.center.x,
+        y: v.y - hitbox.center.y,
+    }));
+    let hitboxBody = Matter.Bodies.fromVertices(
         hitbox.center.x,
         hitbox.center.y,
-        [vertices],
+        [verticesRelative],
         {
             isStatic: true,
             render: {
@@ -69,6 +72,39 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
         verticesCount: vertices.length,
         bodyId: hitboxBody.id,
     });
+
+    function updateHitboxPosition(newCenter: { x: number; y: number }, newVertices: { x: number; y: number }[]): void {
+        const newVerticesRelative = newVertices.map(v => ({
+            x: v.x - newCenter.x,
+            y: v.y - newCenter.y,
+        }));
+
+        Matter.World.remove(engine.world, hitboxBody);
+
+        const newHitboxBody = Matter.Bodies.fromVertices(
+            newCenter.x,
+            newCenter.y,
+            [newVerticesRelative],
+            {
+                isStatic: true,
+                render: {
+                    fillStyle: '#ff0000',
+                    strokeStyle: '#ff0000',
+                    lineWidth: 2,
+                },
+                label: 'hitbox',
+            }
+        );
+
+        Matter.World.add(engine.world, newHitboxBody);
+
+        hitboxBody = newHitboxBody;
+
+        console.log('[usePhysicsEngine] Hitbox position updated:', {
+            newCenter,
+            verticesCount: newVertices.length,
+        });
+    }
 
     Matter.Events.on(engine, 'collisionStart', (event) => {
         const pairs = event.pairs;
@@ -164,6 +200,7 @@ export function usePhysicsEngine(canvas: HTMLCanvasElement, hitbox: HitboxModel)
     return {
         destroy,
         spawnItem,
+        updateHitboxPosition,
         engine,
     };
 }
