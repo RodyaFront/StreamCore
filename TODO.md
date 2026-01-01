@@ -26,4 +26,4 @@
 5. Участие > X минут
 6. Слово дня
 
-https://twitchtokengenerator.com/quick/rTjkyEylDl
+https://twitchtokengenerator.com/quick/it3iK7APHy

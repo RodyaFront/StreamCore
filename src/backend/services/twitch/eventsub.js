@@ -478,17 +478,70 @@ function setupEventSubListeners(eventSubListener, userId, channel) {
         logger.warning('[STREAM] Не удалось подписаться на stream.offline', error.message || error);
     }
 
-    eventSubListener.onSubscriptionCreateFailure((subscription, error) => {
+    eventSubListener.onSubscriptionCreateFailure(async (subscription, error) => {
         const subscriptionType = subscription?.type || 'unknown';
+        const errorMessage = error.message || String(error);
+
+        if (errorMessage.includes('user context') && errorMessage.includes('disabled')) {
+            logger.warning('[REWARDS] Пользовательский контекст отключен, попытка восстановления...');
+
+            try {
+                const userId = broadcasterId;
+                let accessToken = process.env.ACCESS_TOKEN;
+                let refreshToken = process.env.REFRESH_TOKEN;
+
+                if (!refreshToken) {
+                    logger.error('[REWARDS] REFRESH_TOKEN не найден, не могу восстановить пользователя');
+                    logger.error('[REWARDS] Необходимо получить новый REFRESH_TOKEN через OAuth и обновить .env файл');
+                    return;
+                }
+
+                logger.info('[REWARDS] Попытка обновления токена перед переинициализацией...');
+                const refreshed = await refreshAndSaveToken(refreshToken, true);
+
+                if (refreshed) {
+                    accessToken = process.env.ACCESS_TOKEN;
+                    refreshToken = process.env.REFRESH_TOKEN;
+                    logger.success('[REWARDS] Токен обновлен');
+                } else {
+                    logger.error('[REWARDS] Не удалось обновить токен');
+                    logger.error('[REWARDS] REFRESH_TOKEN невалиден или истек. Необходимо получить новый токен через OAuth');
+                    logger.error('[REWARDS] Переинициализация пользователя пропущена, так как токены невалидны');
+                    return;
+                }
+
+                if (!accessToken || !refreshToken) {
+                    logger.error('[REWARDS] Не удалось получить обновленные токены');
+                    return;
+                }
+
+                if (userId && authProvider) {
+                    await authProvider.addUserForToken(
+                        {
+                            accessToken,
+                            refreshToken,
+                            expiresIn: TOKEN_EXPIRES_IN,
+                            scope: REQUIRED_SCOPES
+                        },
+                        userId
+                    );
+                    logger.success('[REWARDS] Пользовательский контекст переинициализирован');
+                } else {
+                    logger.error('[REWARDS] Недостаточно данных для переинициализации пользователя');
+                }
+            } catch (reinitError) {
+                logger.error('[REWARDS] Ошибка при переинициализации пользователя:', reinitError.message || reinitError);
+            }
+        }
 
         if (subscriptionType.includes('stream.online') || subscriptionType.includes('stream.offline')) {
             logger.warning('[STREAM] Не удалось создать подписку на события стрима', {
                 type: subscriptionType,
-                error: error.message || error
+                error: errorMessage
             });
             logger.info('[STREAM] Бонус за первое сообщение будет работать через периодическую проверку статуса');
         } else {
-            logger.error('[REWARDS] Ошибка создания подписки:', error.message || error);
+            logger.error('[REWARDS] Ошибка создания подписки:', errorMessage);
         }
     });
 

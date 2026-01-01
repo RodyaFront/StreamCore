@@ -50,13 +50,24 @@ function validateApiResponse(data) {
     }
 
     if (data.success === true) {
-        // Успешный ответ должен содержать токены
-        return (
+        // API может возвращать токены в разных форматах:
+        // - access_token/refresh_token (стандартный Twitch API)
+        // - token/refresh (twitchtokengenerator.com API)
+        const hasStandardFormat = (
             typeof data.access_token === 'string' &&
             data.access_token.length > 0 &&
             typeof data.refresh_token === 'string' &&
             data.refresh_token.length > 0
         );
+
+        const hasCustomFormat = (
+            typeof data.token === 'string' &&
+            data.token.length > 0 &&
+            typeof data.refresh === 'string' &&
+            data.refresh.length > 0
+        );
+
+        return hasStandardFormat || hasCustomFormat;
     }
 
     // Ошибка должна содержать message
@@ -174,21 +185,25 @@ async function refreshTokenViaAPI(refreshToken) {
             return null;
         }
 
+        // Нормализуем формат ответа (API может возвращать token/refresh или access_token/refresh_token)
+        const accessToken = data.access_token || data.token;
+        const refreshToken = data.refresh_token || data.refresh;
+
         // Валидация полученных токенов
-        if (!validateTokenFormat(data.access_token)) {
-            logger.error('[TOKEN] Некорректный формат access_token');
+        if (!validateTokenFormat(accessToken)) {
+            logger.error('[TOKEN] Некорректный формат access token');
             return null;
         }
 
-        if (!validateTokenFormat(data.refresh_token)) {
-            logger.error('[TOKEN] Некорректный формат refresh_token');
+        if (!validateTokenFormat(refreshToken)) {
+            logger.error('[TOKEN] Некорректный формат refresh token');
             return null;
         }
 
         logger.success('[TOKEN] Токен успешно обновлен через API');
         return {
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token
+            accessToken,
+            refreshToken
         };
     } catch (error) {
         if (error.name === 'AbortError' || error.name === 'TimeoutError') {

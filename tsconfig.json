@@ -24,7 +24,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/frontend/*"],
-      "@shared/*": ["src/frontend/shared/*"]
+      "@shared/*": ["src/frontend/shared/*"],
+      "@features/*": ["src/frontend/features/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "config/**/*.ts"],
