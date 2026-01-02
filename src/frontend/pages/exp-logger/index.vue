@@ -79,19 +79,25 @@ const { logs, addLog, addLevelUpLog, cleanup } = useExpLogger(logsContainer);
 
 useSocketConnection({
     onConnect: () => {
-        console.log('[EXP Logger] Подключено к Socket.IO');
+        console.log('[EXP Logger] ✅ Подключено к Socket.IO');
     },
     onDisconnect: () => {
-        console.log('[EXP Logger] Отключено от Socket.IO');
+        console.log('[EXP Logger] ❌ Отключено от Socket.IO');
     },
     onError: (error: Error) => {
-        console.error('[EXP Logger] Ошибка подключения:', error);
+        console.error('[EXP Logger] ❌ Ошибка подключения:', error);
     },
     onValidationError: (event: string, data: unknown, error: string) => {
-        console.error(`[EXP Logger] Ошибка валидации события ${event}:`, error, data);
+        console.error(`[EXP Logger] ❌ Ошибка валидации события ${event}:`, error, data);
     },
-    onExpAdded: addLog,
-    onLevelUp: addLevelUpLog
+    onExpAdded: (data) => {
+        console.log('[EXP Logger] 📥 onExpAdded вызван с данными:', data);
+        addLog(data);
+    },
+    onLevelUp: (data) => {
+        console.log('[EXP Logger] 📥 onLevelUp вызван с данными:', data);
+        addLevelUpLog(data);
+    }
 });
 
 onBeforeUnmount(() => {

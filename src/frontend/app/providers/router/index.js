@@ -7,6 +7,7 @@ import AlertsPage from '../../../pages/alerts';
 import ViewersCountPage from '../../../pages/viewers-count';
 import ChatPage from '../../../pages/chat';
 import ItemsThrowerPage from '../../../pages/items-thrower';
+import ExperienceElixirPage from '../../../pages/experience-elixir';
 
 const routes = [
     {
@@ -48,6 +49,11 @@ const routes = [
         path: '/items-thrower',
         name: 'ItemsThrower',
         component: ItemsThrowerPage
+    },
+    {
+        path: '/experience-elixir',
+        name: 'ExperienceElixir',
+        component: ExperienceElixirPage
     }
 ];
 

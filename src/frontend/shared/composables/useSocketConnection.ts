@@ -22,6 +22,14 @@ interface ItemThrowEvent {
     count?: number;
 }
 
+interface ExperienceElixirEvent {
+    username: string;
+    rewardTitle: string;
+    avatarUrl?: string | null;
+    oldLevel?: number | null;
+    newLevel?: number | null;
+}
+
 interface SocketEventHandlers {
     onExpAdded?: (data: ExpAddedEvent) => void;
     onLevelUp?: (data: LevelUpEvent) => void;
@@ -31,6 +39,7 @@ interface SocketEventHandlers {
     onChatMessage?: (data: ChatMessageEvent) => void;
     onChatMessageEnriched?: (data: ChatMessageEnrichedEvent) => void;
     onItemThrow?: (data: ItemThrowEvent) => void;
+    onExperienceElixir?: (data: ExperienceElixirEvent) => void;
     onConnect?: () => void;
     onDisconnect?: () => void;
     onError?: (error: Error) => void;
@@ -105,12 +114,14 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
         if (handlers.onExpAdded) {
             const onExpAddedHandler = handlers.onExpAdded;
             socket.value.on('level:exp:added', (data: unknown) => {
+                console.log('[Socket] Получено событие level:exp:added:', data);
                 if (!isValidExpAddedEvent(data)) {
                     const errorMsg = 'Получены некорректные данные события level:exp:added';
                     console.error('[Socket]', errorMsg, data);
                     handlers.onValidationError?.('level:exp:added', data, errorMsg);
                     return;
                 }
+                console.log('[Socket] Валидация пройдена, вызываем обработчик onExpAdded');
                 onExpAddedHandler(data);
             });
         }
@@ -225,6 +236,26 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
                 onItemThrowHandler(itemThrowData);
             });
         }
+
+        if (handlers.onExperienceElixir) {
+            const onExperienceElixirHandler = handlers.onExperienceElixir;
+            socket.value.on('reward:experience_elixir', (data: unknown) => {
+                if (!data || typeof data !== 'object') {
+                    const errorMsg = 'Получены некорректные данные события reward:experience_elixir';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('reward:experience_elixir', data, errorMsg);
+                    return;
+                }
+                const elixirData = data as ExperienceElixirEvent;
+                if (!elixirData.username || !elixirData.rewardTitle) {
+                    const errorMsg = 'Получены некорректные данные события reward:experience_elixir (отсутствует username или rewardTitle)';
+                    console.error('[Socket]', errorMsg, data);
+                    handlers.onValidationError?.('reward:experience_elixir', data, errorMsg);
+                    return;
+                }
+                onExperienceElixirHandler(elixirData);
+            });
+        }
     };
 
     const disconnect = (): void => {
@@ -244,6 +275,7 @@ export function useSocketConnection(handlers: SocketEventHandlers = {}) {
             socket.value.off('chat:message');
             socket.value.off('chat:message:enriched');
             socket.value.off('item:throw:requested');
+            socket.value.off('reward:experience_elixir');
             socket.value.disconnect();
             socket.value = null;
             isConnected.value = false;

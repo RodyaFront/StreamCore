@@ -47,6 +47,7 @@ export function useExpLogger(logsContainer: Ref<HTMLDivElement | null>) {
 
     const addLog = (data: ExpAddedEvent): void => {
         try {
+            console.log('[EXP Logger] addLog вызван с данными:', data);
             if (!data.username || typeof data.amount !== 'number' || data.amount < 0) {
                 console.error('[EXP Logger] Некорректные данные для добавления лога:', data);
                 return;
@@ -66,6 +67,7 @@ export function useExpLogger(logsContainer: Ref<HTMLDivElement | null>) {
             }
 
             logs.value.push(log);
+            console.log('[EXP Logger] Лог добавлен, всего логов:', logs.value.length, 'новый лог:', log);
             limitLogs();
 
             const timerId = setTimeout(() => {

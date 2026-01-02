@@ -43,6 +43,13 @@ export const SocketIOService = {
             }
         });
 
+        // Транслируем события наград клиентам
+        eventBus.on('reward:experience_elixir', (data) => {
+            if (this.io) {
+                this.io.emit('reward:experience_elixir', data);
+            }
+        });
+
         // Транслируем события стрима клиентам
         eventBus.on('stream:viewers:updated', (data) => {
             if (this.io) {

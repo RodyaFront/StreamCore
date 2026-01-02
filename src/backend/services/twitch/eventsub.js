@@ -5,7 +5,7 @@ import { ApiClient } from '@twurple/api';
 import { EventSubWsListener } from '@twurple/eventsub-ws';
 import { upsertReward, insertRedemption, getRedemptionById } from '../../database/queries/rewards.js';
 import { getUserInfoForAlert } from '../../database/queries/alerts.js';
-import { addExp } from '../chat/levels.js';
+import { addExp, getUserLevelData } from '../chat/levels.js';
 import { logger } from '../../core/logger.js';
 import { eventBus } from '../../core/index.js';
 import { sendChatMessage } from './irc.js';
@@ -154,6 +154,16 @@ function isWaveOfRandomItemsReward(rewardTitle) {
 }
 
 /**
+ * Проверяет, является ли награда эликсиром опыта
+ * @param {string} rewardTitle - Название награды
+ * @returns {boolean}
+ */
+function isExperienceElixirReward(rewardTitle) {
+    const lowerTitle = rewardTitle.toLowerCase();
+    return lowerTitle.includes('эликсир') && lowerTitle.includes('опыт');
+}
+
+/**
  * Парсит данные события награды
  * @param {Object} event - Событие от Twitch EventSub
  * @returns {Object} - Распарсенные данные
@@ -288,23 +298,33 @@ function saveRedemptionToDatabase(redemptionData) {
  * @param {string} username - Имя пользователя
  * @param {number} rewardCost - Стоимость награды
  * @param {string} rewardTitle - Название награды
+ * @returns {Promise<Object|null>} - Данные об уровне до и после или null
  */
-function addExperienceForReward(username, rewardCost, rewardTitle) {
+async function addExperienceForReward(username, rewardCost, rewardTitle) {
     if (rewardCost <= 0) {
-        return;
+        return null;
     }
 
-    addExp(username, rewardCost, 'reward', rewardCost)
-        .then((expResult) => {
-            if (expResult) {
-                logger.info(`[REWARDS] ${username} получил ${rewardCost} опыта за награду "${rewardTitle}" (${rewardCost} баллов)`);
-            } else {
-                logger.warning(`[REWARDS] Не удалось добавить опыт для ${username} за награду "${rewardTitle}"`);
-            }
-        })
-        .catch((error) => {
-            logger.error(`[REWARDS] Ошибка при добавлении опыта для ${username}:`, error.message);
-        });
+    try {
+        const levelDataBefore = getUserLevelData(username);
+        const oldLevel = levelDataBefore ? levelDataBefore.level : 1;
+
+        const expResult = await addExp(username, rewardCost, 'reward', rewardCost);
+
+        if (expResult) {
+            logger.info(`[REWARDS] ${username} получил ${rewardCost} опыта за награду "${rewardTitle}" (${rewardCost} баллов)`);
+            return {
+                oldLevel: oldLevel,
+                newLevel: expResult.level
+            };
+        } else {
+            logger.warning(`[REWARDS] Не удалось добавить опыт для ${username} за награду "${rewardTitle}"`);
+            return null;
+        }
+    } catch (error) {
+        logger.error(`[REWARDS] Ошибка при добавлении опыта для ${username}:`, error.message);
+        return null;
+    }
 }
 
 /**
@@ -389,6 +409,42 @@ function processShoutoutReward(username, message) {
 }
 
 /**
+ * Обрабатывает награду "Эликсир опыта"
+ * @param {string} username - Имя пользователя
+ * @param {string} rewardTitle - Название награды
+ * @param {Object|null} levelInfo - Информация об уровне до и после (oldLevel, newLevel)
+ */
+async function processExperienceElixirReward(username, rewardTitle, levelInfo = null) {
+    try {
+        let avatarUrl = null;
+
+        if (apiClient) {
+            try {
+                const user = await apiClient.users.getUserByName(username);
+                if (user) {
+                    avatarUrl = user.profilePictureUrl;
+                }
+            } catch (error) {
+                logger.warning(`[REWARDS] Не удалось получить аватар для ${username}:`, error.message);
+            }
+        }
+
+        const eventData = {
+            username: username,
+            rewardTitle: rewardTitle,
+            avatarUrl: avatarUrl,
+            oldLevel: levelInfo?.oldLevel || null,
+            newLevel: levelInfo?.newLevel || null
+        };
+
+        eventBus.emit('reward:experience_elixir', eventData);
+        logger.info(`[REWARDS] Активирован эликсир опыта "${rewardTitle}" от ${username}`, levelInfo ? `(уровень: ${levelInfo.oldLevel} → ${levelInfo.newLevel})` : '');
+    } catch (error) {
+        logger.error('[REWARDS] Ошибка при обработке эликсира опыта:', error.message);
+    }
+}
+
+/**
  * Обрабатывает событие активации награды
  * @param {Object} event - Событие от Twitch EventSub
  */
@@ -420,7 +476,7 @@ async function handleRedemptionEvent(event) {
         }
 
         const { username, rewardCost, rewardTitle: title } = redemptionData;
-        addExperienceForReward(username, rewardCost, title);
+        const levelInfo = await addExperienceForReward(username, rewardCost, title);
 
         if (isUserInfoReward(rewardTitle)) {
             await processUserInfoReward(username);
@@ -428,6 +484,10 @@ async function handleRedemptionEvent(event) {
 
         if (isShoutoutReward(rewardTitle)) {
             processShoutoutReward(username, userInput || '');
+        }
+
+        if (isExperienceElixirReward(rewardTitle)) {
+            await processExperienceElixirReward(username, rewardTitle, levelInfo);
         }
 
         if (isItemThrowReward(rewardTitle)) {

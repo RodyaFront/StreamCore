@@ -91,7 +91,9 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const hitboxModel = useHitboxModel();
 const spawnPointsModel = useSpawnPointsModel();
 const damagePopups = useDamagePopups();
-const editorMode = ref(true);
+const EDITOR_MODE_STORAGE_KEY = 'items-thrower-editor-mode';
+const storedEditorMode = localStorage.getItem(EDITOR_MODE_STORAGE_KEY);
+const editorMode = ref<boolean>(storedEditorMode !== null ? storedEditorMode === 'true' : true);
 const physicsEngine = ref<ReturnType<typeof usePhysicsEngine> | null>(null);
 
 const hpBarContainerRef = ref<HTMLElement | null>(null);
@@ -257,6 +259,7 @@ defineExpose({
 
 function toggleEditorMode(): void {
     editorMode.value = !editorMode.value;
+    localStorage.setItem(EDITOR_MODE_STORAGE_KEY, String(editorMode.value));
 }
 
 function handleRestoreHp(): void {

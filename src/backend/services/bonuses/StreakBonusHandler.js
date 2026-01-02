@@ -23,7 +23,7 @@ export function initializeStreakBonusHandler() {
         const marked = streakService.markVisit(username);
         if (marked) {
             const streak = streakService.getCurrentStreak(username);
-            logger.debug(
+            logger.info(
                 '[STREAK] Посещение отмечено',
                 `username: ${username}, streak: ${streak}`
             );
