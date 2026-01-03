@@ -3,7 +3,7 @@ import type { UserInfoAlertEvent, ShoutoutAlertEvent } from '@shared/types/alert
 import type { ViewersUpdatedEvent } from '@shared/types/stream';
 import type { ChatMessageEvent } from '@shared/types/chat';
 
-const VALID_EXP_SOURCES: ExpSource[] = ['message', 'word_of_day', 'achievement', 'quest', 'streak', 'reward', 'first_message', 'unknown'];
+const VALID_EXP_SOURCES: ExpSource[] = ['message', 'word_of_day', 'achievement', 'quest', 'streak', 'reward', 'first_message', 'finishing_blow', 'unknown'];
 
 export function isValidExpAddedEvent(data: unknown): data is ExpAddedEvent {
     if (!data || typeof data !== 'object') {
@@ -39,6 +39,26 @@ export function isValidExpAddedEvent(data: unknown): data is ExpAddedEvent {
     if (event.pointsSpent !== undefined) {
         if (typeof event.pointsSpent !== 'number' || event.pointsSpent < 0 || !Number.isFinite(event.pointsSpent)) {
             return false;
+        }
+    }
+
+    if (event.multipliers !== undefined) {
+        if (!Array.isArray(event.multipliers)) {
+            return false;
+        }
+        for (const multiplier of event.multipliers) {
+            if (!multiplier || typeof multiplier !== 'object') {
+                return false;
+            }
+            if (typeof multiplier.type !== 'string' || !['subscriber', 'streak'].includes(multiplier.type)) {
+                return false;
+            }
+            if (typeof multiplier.value !== 'number' || !Number.isFinite(multiplier.value) || multiplier.value <= 0) {
+                return false;
+            }
+            if (multiplier.type === 'streak' && (multiplier.streak === undefined || typeof multiplier.streak !== 'number')) {
+                return false;
+            }
         }
     }
 

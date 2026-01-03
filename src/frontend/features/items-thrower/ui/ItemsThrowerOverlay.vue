@@ -96,6 +96,8 @@ const storedEditorMode = localStorage.getItem(EDITOR_MODE_STORAGE_KEY);
 const editorMode = ref<boolean>(storedEditorMode !== null ? storedEditorMode === 'true' : true);
 const physicsEngine = ref<ReturnType<typeof usePhysicsEngine> | null>(null);
 
+let activeWavesCount = 0;
+
 const hpBarContainerRef = ref<HTMLElement | null>(null);
 const hpBarFillRef = ref<HTMLElement | null>(null);
 
@@ -234,7 +236,7 @@ function handleSpawnTest(): void {
 
 function spawnItemFromReward(rewardData: { username: string; rewardTitle: string; rewardCost: number }): void {
     if (physicsEngine.value) {
-        physicsEngine.value.spawnItem();
+        physicsEngine.value.spawnItem(undefined, rewardData.username);
     }
 }
 
@@ -243,18 +245,32 @@ function spawnWaveOfItems(rewardData: { username: string; rewardTitle: string; r
         return;
     }
 
+    activeWavesCount++;
+    const waveDuration = count * 50;
+    console.log('[ItemsThrowerOverlay] Wave started, active waves:', activeWavesCount, 'duration:', waveDuration);
+
     for (let i = 0; i < count; i++) {
         setTimeout(() => {
             if (physicsEngine.value) {
-                physicsEngine.value.spawnItem();
+                physicsEngine.value.spawnItem(undefined, rewardData.username);
             }
         }, i * 50);
     }
+
+    setTimeout(() => {
+        activeWavesCount = Math.max(0, activeWavesCount - 1);
+        console.log('[ItemsThrowerOverlay] Wave finished, active waves:', activeWavesCount);
+    }, waveDuration);
+}
+
+function hasActiveWaves(): boolean {
+    return activeWavesCount > 0;
 }
 
 defineExpose({
     spawnItemFromReward,
     spawnWaveOfItems,
+    hasActiveWaves,
 });
 
 function toggleEditorMode(): void {
@@ -372,6 +388,8 @@ function handleSpawnPointRemove(pointId: string): void {
 onMounted(async () => {
     await nextTick();
 
+    toggleEditorMode();
+
     if (!canvasRef.value) {
         console.error('[ItemsThrowerOverlay] Canvas ref is null');
         return;
@@ -382,7 +400,7 @@ onMounted(async () => {
         canvasRef.value,
         hitboxModel.hitbox.value,
         () => spawnPointsModel.getRandomSpawnPoint(),
-        (damage: number) => hitboxModel.applyDamage(damage),
+        (damage: number, username?: string) => hitboxModel.applyDamage(damage, username),
         (x: number, y: number, damage: number) => {
             if (canvasRef.value) {
                 const rect = canvasRef.value.getBoundingClientRect();
@@ -392,6 +410,7 @@ onMounted(async () => {
             }
         }
     );
+
 });
 </script>
 

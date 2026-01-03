@@ -16,6 +16,7 @@ import { QUEUE_CLEANUP_DELAY, MAX_SAFE_EXP } from './config.js';
 import { getStreakService } from '../bonuses/StreakService.js';
 import { STREAK_BONUS } from '../bonuses/constants.js';
 import { getStreamSessionService } from '../stream/StreamSessionService.js';
+import { getUserInfoService } from './UserInfoService.js';
 
 // Очереди для последовательной обработки наград одного пользователя
 const userQueues = new Map();
@@ -171,6 +172,38 @@ export async function addExp(username, amount, source = 'unknown', pointsSpent =
 
         const normalizedUsername = username.toLowerCase();
 
+        // Применяем множители опыта (подписчик x2 и streak x1.5)
+        let expAmount = amount;
+        const appliedMultipliers = [];
+        const streakService = getStreakService();
+        const streamSession = getStreamSessionService();
+        const userInfoService = getUserInfoService();
+
+        // Применяем множитель x2 для подписчиков
+        const isSubscriber = await userInfoService.isSubscriber(normalizedUsername);
+        if (isSubscriber) {
+            expAmount = Math.floor(expAmount * 2);
+            appliedMultipliers.push({ type: 'subscriber', value: 2 });
+            logger.info(
+                `[LEVELS] Применен множитель подписчика для ${normalizedUsername}`,
+                `source: ${source}, multiplier: 2x, exp: ${expAmount}`
+            );
+        }
+
+        // Применяем множитель streak, если стрим активен и у пользователя есть streak >= MIN_STREAK
+        // НЕ применяем streak для наград (source === 'reward')
+        if (source !== 'reward' && streamSession.getIsLive()) {
+            const streak = streakService.getCurrentStreak(normalizedUsername);
+            if (streak >= STREAK_BONUS.MIN_STREAK) {
+                expAmount = Math.floor(expAmount * STREAK_BONUS.MULTIPLIER);
+                appliedMultipliers.push({ type: 'streak', value: STREAK_BONUS.MULTIPLIER, streak });
+                logger.info(
+                    `[LEVELS] Применен множитель streak для ${normalizedUsername}`,
+                    `source: ${source}, streak: ${streak}, multiplier: ${STREAK_BONUS.MULTIPLIER}, exp: ${expAmount}`
+                );
+            }
+        }
+
         // Создаем очередь для этого пользователя, если её нет
         if (!userQueues.has(normalizedUsername)) {
             userQueues.set(normalizedUsername, Promise.resolve());
@@ -206,13 +239,13 @@ export async function addExp(username, amount, source = 'unknown', pointsSpent =
         const oldLevel = levelData.level;
         const oldTotalExp = levelData.total_exp;
 
-                // Проверка на переполнение total_exp
-                if (oldTotalExp > MAX_SAFE_EXP - amount) {
-                    logger.error(`[LEVELS] Переполнение total_exp для ${normalizedUsername}: ${oldTotalExp} + ${amount}`);
+                // Проверка на переполнение total_exp (используем expAmount с множителями)
+                if (oldTotalExp > MAX_SAFE_EXP - expAmount) {
+                    logger.error(`[LEVELS] Переполнение total_exp для ${normalizedUsername}: ${oldTotalExp} + ${expAmount}`);
                     return null;
                 }
 
-        const newTotalExp = oldTotalExp + amount;
+        const newTotalExp = oldTotalExp + expAmount;
 
         // Рассчитываем новый уровень
         const newLevel = calculateLevel(newTotalExp);
@@ -324,10 +357,10 @@ export async function addExp(username, amount, source = 'unknown', pointsSpent =
             logger.info(`[LEVELS] ${normalizedUsername} повысил уровень: ${oldLevel} → ${newLevel}`);
         }
 
-        // Отправляем событие о добавлении опыта
+        // Отправляем событие о добавлении опыта (используем expAmount с множителями)
         const eventData = {
             username: normalizedUsername,
-            amount,
+            amount: expAmount,
             source,
             oldTotalExp,
             newTotalExp,
@@ -336,6 +369,10 @@ export async function addExp(username, amount, source = 'unknown', pointsSpent =
 
         if (pointsSpent !== null && pointsSpent > 0) {
             eventData.pointsSpent = pointsSpent;
+        }
+
+        if (appliedMultipliers.length > 0) {
+            eventData.multipliers = appliedMultipliers;
         }
 
         eventBus.emit('level:exp:added', eventData);
@@ -434,31 +471,21 @@ export function getUserLevelInfo(username) {
 export function initializeLevelsEventHandlers() {
     const streakService = getStreakService();
     const streamSession = getStreamSessionService();
+    const userInfoService = getUserInfoService();
 
     // Обработка логирования сообщений для начисления опыта
-    eventBus.on('message:logged', ({ username, messageLength, isCommand }) => {
+    eventBus.on('message:logged', async ({ username, messageLength, isCommand }) => {
         // Не начисляем опыт за команды
         if (isCommand) {
             return;
         }
 
-        let expAmount = calculateMessageExp(messageLength);
+        const expAmount = calculateMessageExp(messageLength);
         if (expAmount <= 0) {
             return;
         }
 
-        // Применяем множитель streak, если стрим активен и у пользователя есть streak >= MIN_STREAK
-        if (streamSession.getIsLive()) {
-            const streak = streakService.getCurrentStreak(username);
-            if (streak >= STREAK_BONUS.MIN_STREAK) {
-                expAmount = Math.floor(expAmount * STREAK_BONUS.MULTIPLIER);
-                logger.debug(
-                    `[LEVELS] Применен множитель streak для ${username}`,
-                    `streak: ${streak}, multiplier: ${STREAK_BONUS.MULTIPLIER}, exp: ${expAmount}`
-                );
-            }
-        }
-
+        // Множители теперь применяются внутри addExp
         addExp(username, expAmount, 'message').catch((error) => {
             logger.error(`[LEVELS] Ошибка при добавлении опыта за сообщение для ${username}:`, error);
         });

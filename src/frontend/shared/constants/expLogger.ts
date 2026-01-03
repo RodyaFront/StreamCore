@@ -14,6 +14,7 @@ export const SOURCE_TEXT_MAP = {
     'streak': 'за стрик',
     'reward': 'за награду',
     'first_message': 'за первое сообщение',
+    'finishing_blow': 'за добитие',
     'unknown': 'за активность'
 } as const;
 
@@ -25,6 +26,7 @@ export const SOURCE_CLASSES_MAP = {
     'streak': 'text-red-100 bg-red-800/30',
     'reward': 'text-amber-100 bg-amber-800/30',
     'first_message': 'text-emerald-100 bg-emerald-800/30',
+    'finishing_blow': 'text-orange-100 bg-orange-800/30',
     'unknown': 'text-gray-100 bg-gray-800/30'
 } as const;
 

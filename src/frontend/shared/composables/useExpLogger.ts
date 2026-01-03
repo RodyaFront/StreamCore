@@ -66,6 +66,10 @@ export function useExpLogger(logsContainer: Ref<HTMLDivElement | null>) {
                 log.pointsSpent = Math.max(0, Math.floor(data.pointsSpent));
             }
 
+            if (data.multipliers && data.multipliers.length > 0) {
+                log.multipliers = data.multipliers;
+            }
+
             logs.value.push(log);
             console.log('[EXP Logger] Лог добавлен, всего логов:', logs.value.length, 'новый лог:', log);
             limitLogs();

@@ -48,7 +48,7 @@ export function usePhysicsEngine(
     canvas: HTMLCanvasElement,
     hitbox: HitboxModel,
     getRandomSpawnPoint: () => { position: { x: number; y: number } },
-    applyDamage: (damage: number) => void,
+    applyDamage: (damage: number, username?: string) => void,
     onDamagePopup?: (x: number, y: number, damage: number) => void
 ) {
     const size = updateCanvasSize(canvas);
@@ -147,6 +147,7 @@ export function usePhysicsEngine(
                 const itemBody = isItemA ? bodyA : bodyB;
                 const itemSound = (itemBody as any)._itemSound as string | undefined;
                 const itemDamage = (itemBody as any)._itemDamage as number | undefined;
+                const itemUsername = (itemBody as any)._itemUsername as string | undefined;
 
                 if (!(itemBody as any)._hitPlayed) {
                     (itemBody as any)._hitPlayed = true;
@@ -154,7 +155,7 @@ export function usePhysicsEngine(
                         soundManager.play(itemSound, SOUND_CONFIG.VOLUME);
                     }
                     if (itemDamage !== undefined) {
-                        applyDamage(itemDamage);
+                        applyDamage(itemDamage, itemUsername);
 
                         const collisionPoint = pair.collision?.supports?.[0];
                         const popupX = collisionPoint?.x ?? itemBody.position.x;
@@ -168,6 +169,7 @@ export function usePhysicsEngine(
                         itemId: itemBody.id,
                         itemPosition: { x: itemBody.position.x, y: itemBody.position.y },
                         damage: itemDamage,
+                        username: itemUsername,
                         collisionPoint: pair.collision?.supports?.[0] || null,
                     });
                 }
@@ -182,7 +184,7 @@ export function usePhysicsEngine(
 
     console.log('[usePhysicsEngine] Engine started');
 
-    async function spawnItem(item?: ItemDescriptor): Promise<void> {
+    async function spawnItem(item?: ItemDescriptor, username?: string): Promise<void> {
         const selectedItem = item || ITEMS[Math.floor(Math.random() * ITEMS.length)];
         const spawnPoint = getRandomSpawnPoint();
         const randomOffset = (Math.random() - 0.5) * ITEM_CONFIG.SPAWN_RANDOM_RANGE;
@@ -233,6 +235,7 @@ export function usePhysicsEngine(
 
         (body as any)._itemSound = selectedItem.sound;
         (body as any)._itemDamage = selectedItem.damage;
+        (body as any)._itemUsername = username;
 
         Matter.World.add(engine.world, body);
 
@@ -244,6 +247,7 @@ export function usePhysicsEngine(
             angularVelocity,
             bodyId: body.id,
             item: selectedItem,
+            username,
         });
     }
 

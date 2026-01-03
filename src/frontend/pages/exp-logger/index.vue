@@ -49,6 +49,16 @@
                                 class="inline-block px-3 py-1 rounded-full"
                             >
                                 {{ getSourceText(log.source) }}</span>
+                            <span v-if="log.multipliers && log.multipliers.length > 0" class="flex items-center gap-2">
+                                <span
+                                    v-for="(multiplier, index) in log.multipliers"
+                                    :key="index"
+                                    class="text-xs font-semibold"
+                                    :class="multiplier.type === 'subscriber' ? 'text-purple-300' : 'text-orange-300'"
+                                >
+                                    {{ multiplier.type === 'subscriber' ? 'Подписка' : `Стрик ${multiplier.streak}` }} x{{ multiplier.value }}
+                                </span>
+                            </span>
                             <span v-if="log.pointsSpent" class="opacity-50 text-sm">
                                 (потратив {{ log.pointsSpent }} баллов)
                             </span>

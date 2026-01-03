@@ -1,4 +1,4 @@
-export type ExpSource = 'message' | 'word_of_day' | 'achievement' | 'quest' | 'streak' | 'reward' | 'first_message' | 'unknown';
+export type ExpSource = 'message' | 'word_of_day' | 'achievement' | 'quest' | 'streak' | 'reward' | 'first_message' | 'finishing_blow' | 'unknown';
 
 export interface ExpLog {
     id: number;
@@ -8,6 +8,7 @@ export interface ExpLog {
     type: 'exp';
     timestamp: number;
     pointsSpent?: number;
+    multipliers?: ExpMultiplier[];
 }
 
 export interface LevelUpLog {
@@ -20,6 +21,12 @@ export interface LevelUpLog {
 
 export type Log = ExpLog | LevelUpLog;
 
+export interface ExpMultiplier {
+    type: 'subscriber' | 'streak';
+    value: number;
+    streak?: number;
+}
+
 export interface ExpAddedEvent {
     username: string;
     amount: number;
@@ -28,6 +35,7 @@ export interface ExpAddedEvent {
     newTotalExp: number;
     level: number;
     pointsSpent?: number;
+    multipliers?: ExpMultiplier[];
 }
 
 export interface LevelUpEvent {
